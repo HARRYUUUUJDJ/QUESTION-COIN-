@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Airdrop - Coin Tap Master</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght%40400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #000;
+            color: #fff;
+            overflow-y: auto; /* Allow scrolling for content */
+            -webkit-user-select: none; /* Disable text selection */
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        .cubic-pattern {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                repeating-linear-gradient(0deg, #1a0033 0, #1a0033 1px, transparent 1px, transparent 20px),
+                repeating-linear-gradient(90deg, #1a0033 0, #1a0033 1px, transparent 1px, transparent 20px);
+            background-size: 20px 20px;
+            animation: glow-fade 10s infinite alternate;
+            z-index: -1;
+        }
+        @keyframes glow-fade {
+            0%, 10% { opacity: 0.2; }
+            50% { opacity: 0.8; }
+            90%, 100% { opacity: 0.2; }
+        }
+        .btn-tap-animation:active {
+            transform: scale(0.95);
+            transition: transform 0.1s ease-out;
+        }
+        /* Notification style */
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            z-index: 1001;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        .notification.show {
+            opacity: 1;
+        }
+        .notification.success {
+            border: 2px solid #34D399; /* Green */
+        }
+        .notification.error {
+            border: 2px solid #EF4444; /* Red */
+        }
+        .notification.info {
+            border: 2px solid #8B5CF6; /* Purple */
+        }
+    </style>
+</head>
+<body class="bg-black text-white flex flex-col h-screen">
+    <div class="cubic-pattern"></div>
+    <header class="flex justify-between items-center p-4 z-10 w-full">
+        <a href="index.html" class="flex items-center space-x-2 p-2 rounded-xl bg-gray-800 hover:bg-gray-700 transition-colors btn-tap-animation">
+            <i class="fas fa-arrow-left text-purple-400"></i>
+            <span class="text-sm font-semibold text-purple-400">Back</span>
+        </a>
+        <h1 class="text-2xl font-bold text-purple-400">Airdrop Events</h1>
+        <div class="flex flex-col space-y-2 items-end">
+            <div class="flex items-center space-x-1 p-2 rounded-xl bg-gray-800 text-sm">
+                <i class="fas fa-coins text-yellow-400"></i>
+                <span id="coins-display-header" class="font-semibold text-yellow-400">0</span>
+            </div>
+            <div class="flex items-center space-x-1 p-2 rounded-xl bg-gray-800 text-sm">
+                <span class="text-yellow-400 text-lg">🔑</span>
+                <span id="keys-display-header" class="font-semibold text-yellow-400">0</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow flex flex-col items-center p-4 z-10 overflow-y-auto">
+        <p class="text-gray-300 text-lg mb-8 text-center">Participate in airdrops and manage your crypto assets!</p>
+
+        <section class="w-full max-w-md mb-10 bg-gray-800 p-6 rounded-xl shadow-lg border border-blue-600 text-center">
+            <h2 class="text-3xl font-bold text-blue-400 mb-6">Connect Your Wallet</h2>
+            <p class="text-gray-300 mb-6">Link your crypto wallet to receive airdrop rewards directly!</p>
+            <button id="connect-wallet-button" class="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md transition-colors btn-tap-animation text-lg">
+                <i class="fas fa-wallet mr-2"></i> Connect Wallet
+            </button>
+            <p id="wallet-status" class="text-sm text-gray-400 mt-4">Status: Disconnected</p>
+            <p id="wallet-address" class="text-sm text-gray-400 break-all mt-2 hidden"></p>
+        </section>
+
+        <section class="w-full max-w-md mb-10 bg-gray-800 p-6 rounded-xl shadow-lg border border-green-600 text-center">
+            <h2 class="text-3xl font-bold text-green-400 mb-6">Convert Keys to USDT</h2>
+            <p class="text-gray-300 mb-6">Exchange your in-game Keys for real-world USDT!</p>
+            <div class="flex items-center justify-center space-x-2 mb-4">
+                <span class="text-yellow-400 text-2xl">🔑</span>
+                <span class="text-xl font-bold text-white">1000 Keys</span>
+                <i class="fas fa-arrow-right text-gray-400"></i>
+                <span class="text-green-400 text-2xl">₮</span>
+                <span class="text-xl font-bold text-white">1 USDT (Example Rate)</span>
+            </div>
+            <button id="convert-usdt-button" class="px-8 py-4 bg-gray-600 text-gray-400 font-semibold rounded-lg shadow-md cursor-not-allowed text-lg" disabled>
+                Conversion Coming Soon!
+            </button>
+            <p class="text-sm text-gray-400 mt-4">This feature is currently under development.</p>
+        </section>
+
+        <section class="w-full max-w-4xl mb-10">
+            <h2 class="text-3xl font-bold text-purple-400 mb-6 text-center">Upcoming Airdrops</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="bg-gray-800 p-6 rounded-xl shadow-lg border border-purple-600 text-center">
+                    <h3 class="text-xl font-bold text-purple-400 mb-2">Daily Login Bonus</h3>
+                    <p class="text-gray-300 mb-4">Log in daily to claim your bonus coins!</p>
+                    <button class="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg shadow-md transition-colors btn-tap-animation">Claim Now</button>
+                </div>
+                <div class="bg-gray-800 p-6 rounded-xl shadow-lg border border-purple-600 text-center">
+                    <h3 class="text-xl font-bold text-purple-400 mb-2">Referral Rewards</h3>
+                    <p class="text-gray-300 mb-4">Invite friends and earn coins for every referral!</p>
+                    <button class="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg shadow-md transition-colors btn-tap-animation">Invite Friends</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="notification-container" class="notification hidden"></div>
+
+    <nav class="flex justify-around items-center w-full bg-gray-900 p-2 fixed bottom-0 left-0 rounded-t-2xl shadow-inner shadow-purple-900 z-10">
+        <a href="card.html" class="flex flex-col items-center p-2 text-purple-400 hover:text-purple-300 transition-colors btn-tap-animation w-1/4">
+            <i class="fas fa-credit-card text-2xl mb-1"></i>
+            <span class="text-xs">Cards</span>
+        </a>
+        <a href="games.html" class="flex flex-col items-center p-2 text-purple-400 hover:text-purple-300 transition-colors btn-tap-animation w-1/4">
+            <i class="fas fa-gamepad text-2xl mb-1"></i>
+            <span class="text-xs">Games</span>
+        </a>
+        <a href="market.html" class="flex flex-col items-center p-2 text-purple-400 hover:text-purple-300 transition-colors btn-tap-animation w-1/4">
+            <i class="fas fa-store text-2xl mb-1"></i>
+            <span class="text-xs">Market</span>
+        </a>
+        <a href="airdrop.html" class="flex flex-col items-center p-2 text-purple-400 hover:text-purple-300 transition-colors btn-tap-animation w-1/4">
+            <i class="fas fa-plane-departure text-2xl mb-1"></i>
+            <span class="text-xs">Airdrop</span>
+        </a>
+    </nav>
+
+    <script type="module">
+        // Game State Variables (loaded from localStorage)
+        let coins = 0;
+        let keys = 0;
+
+        // DOM Elements
+        const coinsDisplayHeader = document.getElementById('coins-display-header');
+        const keysDisplayHeader = document.getElementById('keys-display-header');
+        const notificationContainer = document.getElementById('notification-container');
+        const connectWalletButton = document.getElementById('connect-wallet-button');
+        const walletStatus = document.getElementById('wallet-status');
+        const walletAddress = document.getElementById('wallet-address');
+        const convertUsdtButton = document.getElementById('convert-usdt-button');
+
+        // --- Utility Functions ---
+        const formatNumber = (num) => {
+            if (num >= 1000000000) return (num / 1000000000).toFixed(1) + 'B';
+            if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+            return num.toLocaleString();
+        };
+
+        const showNotification = (message, type = 'info') => {
+            notificationContainer.textContent = message;
+            notificationContainer.className = `notification show ${type}`;
+            setTimeout(() => {
+                notificationContainer.classList.remove('show');
+            }, 3000); // Hide after 3 seconds
+        };
+
+        // --- Game State Management (Local Storage) ---
+        const loadGameState = () => {
+            try {
+                const savedState = localStorage.getItem('coinTapMasterState');
+                if (savedState) {
+                    const gameState = JSON.parse(savedState);
+                    coins = gameState.coins || 0;
+                    keys = gameState.keys || 0;
+                    console.log("Game state loaded in Airdrop page:", gameState);
+                } else {
+                    console.log("No saved game state found in Airdrop page. Initializing defaults.");
+                }
+            } catch (e) {
+                console.error("Error loading game state in Airdrop page:", e);
+                showNotification("Error loading game data!", "error");
+            }
+            updateUI();
+        };
+
+        const updateUI = () => {
+            coinsDisplayHeader.textContent = formatNumber(coins);
+            keysDisplayHeader.textContent = formatNumber(keys);
+        };
+
+        // --- Wallet Connection Logic (Placeholder) ---
+        connectWalletButton.addEventListener('click', () => {
+            showNotification("Attempting to connect wallet...", "info");
+
+            // Simulate a successful connection after a delay
+            setTimeout(() => {
+                const simulatedAddress = "0x" + Math.random().toString(16).substring(2, 42); // Random fake address
+                walletStatus.textContent = "Status: Connected";
+                walletStatus.classList.remove('text-gray-400');
+                walletStatus.classList.add('text-green-400');
+                walletAddress.textContent = `Address: ${simulatedAddress}`;
+                walletAddress.classList.remove('hidden');
+                connectWalletButton.textContent = "Wallet Connected";
+                connectWalletButton.disabled = true;
+                connectWalletButton.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                connectWalletButton.classList.add('bg-green-600', 'cursor-not-allowed');
+                showNotification("Wallet connected successfully!", "success");
+            }, 2000);
+        });
+
+        // --- Keys to USDT Conversion Logic (Unavailable) ---
+        convertUsdtButton.addEventListener('click', () => {
+            showNotification("Conversion to USDT is not yet available. Stay tuned!", "info");
+        });
+
+
+        // Initialize on page load
+        window.onload = loadGameState;
+    </script>
+</body>
+</html>

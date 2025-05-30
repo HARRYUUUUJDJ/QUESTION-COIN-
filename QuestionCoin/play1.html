@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lucky Spin Wheel - Coin Tap Master</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* General Body and Background Styling */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #000;
+            color: #fff;
+            overflow-y: auto; /* Allow scrolling for content */
+            -webkit-user-select: none; /* Disable text selection */
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        .cubic-pattern {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                repeating-linear-gradient(0deg, #1a0033 0, #1a0033 1px, transparent 1px, transparent 20px),
+                repeating-linear-gradient(90deg, #1a0033 0, #1a0033 1px, transparent 1px, transparent 20px);
+            background-size: 20px 20px;
+            animation: glow-fade 10s infinite alternate;
+            z-index: -1;
+        }
+        @keyframes glow-fade {
+            0%, 10% { opacity: 0.2; }
+            50% { opacity: 0.8; }
+            90%, 100% { opacity: 0.2; }
+        }
+        .btn-tap-animation:active {
+            transform: scale(0.95);
+            transition: transform 0.1s ease-out;
+        }
+
+        /* Notification Styling */
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            z-index: 1001;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        .notification.show {
+            opacity: 1;
+        }
+        .notification.success {
+            border: 2px solid #34D399; /* Green */
+        }
+        .notification.error {
+            border: 2px solid #EF4444; /* Red */
+        }
+        .notification.info {
+            border: 2px solid #8B5CF6; /* Purple */
+        }
+
+        /* Modal Backdrop (for game entry confirmation) */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        /* Spin Wheel Specific Styles */
+        #spin-wheel-canvas {
+            border-radius: 50%;
+            background-color: #333;
+            box-shadow: 0 0 20px rgba(138, 43, 226, 0.7);
+            /* Add transition for the wheel itself to spin */
+            transition: transform 4s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+
+        /* Fixed arrow pointer style */
+        #fixed-arrow {
+            position: absolute;
+            top: -10px; /* Adjust to position above the wheel */
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 3rem; /* Large enough to be visible */
+            color: #FFD700; /* Gold color for arrow */
+            z-index: 11; /* Above the canvas */
+            pointer-events: none; /* Ensure it doesn't block clicks */
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.7); /* Subtle glow */
+        }
+    </style>
+</head>
+<body class="bg-black text-white flex flex-col h-screen">
+    <div class="cubic-pattern"></div>
+    <header class="flex justify-between items-center p-4 z-10 w-full">
+        <a href="games.html" class="flex items-center space-x-2 p-2 rounded-xl bg-gray-800 hover:bg-gray-700 transition-colors btn-tap-animation">
+            <i class="fas fa-arrow-left text-purple-400"></i>
+            <span class="text-sm font-semibold text-purple-400">Back to Games</span>
+        </a>
+        <h1 class="text-2xl font-bold text-purple-400">Lucky Spin Wheel</h1>
+        <div class="flex flex-col space-y-2 items-end">
+            <div class="flex items-center space-x-1 p-2 rounded-xl bg-gray-800 text-sm">
+                <i class="fas fa-coins text-yellow-400"></i>
+                <span id="coins-display-header" class="font-semibold text-yellow-400">0</span>
+            </div>
+            <div class="flex items-center space-x-1 p-2 rounded-xl bg-gray-800 text-sm">
+                <span class="text-yellow-400 text-lg">🔑</span>
+                <span id="keys-display-header" class="font-semibold text-yellow-400">0</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow flex flex-col items-center justify-center p-4 z-10 overflow-y-auto">
+        <div class="relative w-72 h-72 sm:w-96 sm:h-96 mx-auto mb-6">
+            <canvas id="spin-wheel-canvas" width="384" height="384" class="w-full h-full"></canvas>
+            <div id="fixed-arrow">👇</div>
+        </div>
+        <p id="spin-result" class="text-xl font-semibold text-white mb-6">Spin to win!</p>
+        
+        <div class="flex flex-col sm:flex-row gap-4 w-full max-w-xs">
+            <button id="single-spin-button" class="flex-1 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg shadow-md transition-colors btn-tap-animation">Key Spin (40 Keys)</button>
+            <button id="multi-spin-button" class="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md transition-colors btn-tap-animation">Multi Spin (400 Keys)</button>
+        </div>
+    </main>
+
+    <div id="game-entry-confirmation-modal" class="modal-backdrop hidden">
+        <div class="bg-gray-800 p-8 rounded-xl shadow-2xl border-2 border-purple-600 text-center w-11/12 max-w-md">
+            <h2 class="text-2xl font-bold text-purple-400 mb-4">Confirm Entry</h2>
+            <p class="text-gray-300 mb-6">Do you want to play <span id="confirm-game-name" class="font-bold text-white"></span> for <span id="confirm-game-cost" class="font-bold text-yellow-400"></span> Keys?</p>
+            <div class="flex justify-around gap-4">
+                <button id="confirm-entry-button" class="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg shadow-md transition-colors btn-tap-animation">Confirm</button>
+                <button id="cancel-entry-button" class="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg shadow-md transition-colors btn-tap-animation">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification-container" class="notification hidden"></div>
+
+    <script type="module">
+        console.log('Script started: play1.html (Lucky Spin Wheel)'); // Debugging log
+
+        // Global Game State Variables (loaded from localStorage)
+        let coins = 0;
+        let keys = 0;
+
+        // Variables to store the game to be confirmed and its cost
+        let currentPlayGameFunction = null;
+        let currentEntryCost = 0;
+        let currentSpinType = ''; // 'single' or 'multi'
+
+        // Game-specific state for Spin Wheel
+        let spinWheelState = {
+            lastSpinTime: 0, // Timestamp of last spin
+            spinBet: 0 // Player's chosen bet amount
+        };
+
+        // DOM Elements
+        const coinsDisplayHeader = document.getElementById('coins-display-header');
+        const keysDisplayHeader = document.getElementById('keys-display-header');
+        const notificationContainer = document.getElementById('notification-container');
+
+        // Spin Wheel Specific DOM Elements
+        // const spinBetInput = document.getElementById('spin-bet-input'); // Removed
+        const spinWheelCanvas = document.getElementById('spin-wheel-canvas');
+        const singleSpinButton = document.getElementById('single-spin-button');
+        const multiSpinButton = document.getElementById('multi-spin-button');
+        const spinResultDisplay = document.getElementById('spin-result');
+        const ctx = spinWheelCanvas ? spinWheelCanvas.getContext('2d') : null; // Get context safely
+
+        // Game Entry Confirmation Modal Elements
+        const gameEntryConfirmationModal = document.getElementById('game-entry-confirmation-modal');
+        const confirmGameName = document.getElementById('confirm-game-name');
+        const confirmGameCost = document.getElementById('confirm-game-cost');
+        const confirmEntryButton = document.getElementById('confirm-entry-button');
+        const cancelEntryButton = document.getElementById('cancel-entry-button');
+
+        // --- Utility Functions ---
+        /**
+         * Formats a number for display, adding K, M, B suffixes.
+         * @param {number} num - The number to format.
+         * @returns {string} The formatted string.
+         */
+        const formatNumber = (num) => {
+            if (num === null || num === undefined) return 'N/A';
+            if (num >= 1000000000) return (num / 1000000000).toFixed(1) + 'B';
+            if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+            return num.toLocaleString();
+        };
+
+        /**
+         * Displays a temporary notification message to the user.
+         * @param {string} message - The message to display.
+         * @param {'info'|'success'|'error'} type - The type of notification (for styling).
+         */
+        const showNotification = (message, type = 'info') => {
+            console.log(`Notification: ${message} (Type: ${type})`);
+            if (notificationContainer) {
+                notificationContainer.textContent = message;
+                notificationContainer.className = `notification show ${type}`;
+                setTimeout(() => {
+                    notificationContainer.classList.remove('show');
+                }, 3000); // Hide after 3 seconds
+            }
+        };
+
+        /**
+         * Resizes a given canvas element to match its parent's dimensions
+         * and then calls a redraw function.
+         * @param {HTMLCanvasElement} canvas - The canvas element to resize.
+         * @param {Function} drawFunction - The function to call to redraw the canvas content.
+         */
+        const resizeCanvasToParent = (canvas, drawFunction) => {
+            if (!canvas || !canvas.parentElement) {
+                console.warn(`Canvas or its parent not found for resizing: ${canvas?.id}`);
+                return;
+            }
+            const parent = canvas.parentElement;
+            // Set canvas attributes to match parent's client dimensions
+            canvas.width = parent.clientWidth;
+            canvas.height = parent.clientHeight;
+            // Redraw content after resizing
+            if (drawFunction) {
+                drawFunction();
+            }
+            console.log(`Resized canvas ${canvas.id} to ${canvas.width}x${canvas.height}`);
+        };
+
+        // --- Game State Management (Local Storage) ---
+        /**
+         * Loads game state (coins, keys, game-specific states) from localStorage.
+         * Initializes with defaults if no saved state is found or if parsing fails.
+         */
+        const loadGameState = () => {
+            console.log('Attempting to load game state from localStorage...');
+            try {
+                const savedState = localStorage.getItem('coinTapMasterState');
+                if (savedState) {
+                    const gameState = JSON.parse(savedState);
+                    coins = gameState.coins !== undefined ? gameState.coins : 0;
+                    keys = gameState.keys !== undefined ? gameState.keys : 0;
+                    console.log("Game state loaded successfully:", { coins, keys });
+                } else {
+                    console.log("No saved game state found in localStorage. Initializing with default values (0 coins, 0 keys).");
+                    coins = 0;
+                    keys = 0;
+                }
+            } catch (e) {
+                console.error("Error loading game state from localStorage:", e);
+                showNotification("Error loading game data! Your progress might not be saved correctly.", "error");
+                coins = 0; // Fallback to default values if loading fails
+                keys = 0;
+            }
+            updateUI(); // Update UI immediately after loading state
+        };
+
+        /**
+         * Saves current game state to localStorage.
+         */
+        const saveGameState = () => {
+            console.log('Attempting to save game state to localStorage...');
+            let existingState = {};
+            try {
+                const savedState = localStorage.getItem('coinTapMasterState');
+                if (savedState) {
+                    existingState = JSON.parse(savedState);
+                }
+            } catch (e) {
+                console.error("Error parsing existing game state from Local Storage before saving:", e);
+            }
+
+            const gameState = {
+                ...existingState, // Preserve other existing properties
+                coins: coins,
+                keys: keys,
+                lastOnlineTime: Date.now()
+            };
+            try {
+                localStorage.setItem('coinTapMasterState', JSON.stringify(gameState));
+                console.log("Game state saved successfully:", gameState);
+            } catch (e) {
+                console.error("Error saving game state to localStorage:", e);
+                showNotification("Error saving game data! Your progress might not be saved.", "error");
+            }
+            updateUI(); // Update UI after saving
+        };
+
+        /**
+         * Updates all UI elements that display coins and keys.
+         */
+        const updateUI = () => {
+            console.log(`Updating UI with Coins: ${coins}, Keys: ${keys}`);
+            if (coinsDisplayHeader) coinsDisplayHeader.textContent = formatNumber(coins);
+            if (keysDisplayHeader) keysDisplayHeader.textContent = formatNumber(keys);
+        };
+
+        // --- Game Entry Confirmation Modal Logic ---
+        /**
+         * Displays a confirmation modal for game entry, checking key balance.
+         * @param {string} gameName - The name of the game to display in the modal.
+         * @param {number} cost - The key cost to enter the game.
+         * @param {Function} callback - The function to execute if the user confirms entry.
+         * @param {string} spinType - 'single' or 'multi'
+         */
+        const showGameEntryConfirmation = (gameName, cost, callback, spinType) => {
+            console.log(`Showing confirmation for: ${gameName}, Cost: ${cost}, Current Keys: ${keys}, Spin Type: ${spinType}`);
+
+            // Removed betAmount validation as there's no input field for it anymore.
+            // The cost itself is the effective bet.
+
+            if (keys < cost) {
+                showNotification(`You need ${formatNumber(cost)} Keys to play ${gameName}! You only have ${formatNumber(keys)}.`, 'error');
+                return;
+            }
+
+            if (confirmGameName) confirmGameName.textContent = gameName;
+            if (confirmGameCost) confirmGameCost.textContent = formatNumber(cost);
+            if (gameEntryConfirmationModal) gameEntryConfirmationModal.classList.remove('hidden');
+
+            currentPlayGameFunction = callback;
+            currentEntryCost = cost;
+            currentSpinType = spinType; // Store spin type for use after confirmation
+        };
+
+        /**
+         * Handles the confirmation of game entry. Deducts keys and starts the game.
+         */
+        const handleConfirmEntry = () => {
+            console.log('Confirm entry button clicked.');
+            if (gameEntryConfirmationModal) gameEntryConfirmationModal.classList.add('hidden');
+
+            if (currentPlayGameFunction) {
+                // Deduct cost here for single/multi spin
+                if (keys >= currentEntryCost) {
+                    keys -= currentEntryCost;
+                    showNotification(`-${formatNumber(currentEntryCost)} Keys. Starting spin...`, 'info');
+                    saveGameState(); // Save state after deduction
+                    currentPlayGameFunction(currentSpinType); // Pass spinType to the game function
+                } else {
+                    showNotification("Not enough keys to start the game!", "error");
+                }
+            } else {
+                showNotification("Error: No game selected to play.", "error");
+            }
+
+            // Reset stored values
+            currentPlayGameFunction = null;
+            currentEntryCost = 0;
+            currentSpinType = '';
+        };
+
+        /**
+         * Handles the cancellation of game entry.
+         */
+        const handleCancelEntry = () => {
+            console.log('Cancel entry button clicked.');
+            if (gameEntryConfirmationModal) gameEntryConfirmationModal.classList.add('hidden');
+            showNotification("Spin cancelled.", "info");
+            currentPlayGameFunction = null;
+            currentEntryCost = 0;
+            currentSpinType = '';
+        };
+
+
+        // --- Spin Wheel Game Logic ---
+        // Base segments for defining outcomes and drawing
+        const baseSegments = {
+            zeroKeys: { text: "0 Keys", multiplier: 0, color: "#4A004A" },
+            onePercentLost: { text: "0x Keys (1% Lost)", multiplier: -0.01, color: "#800000" },
+            twoX: { text: "2x Keys", multiplier: 2, color: "#006400" },
+            fiveX: { text: "5x Keys", multiplier: 5, color: "#00008B" },
+            tenX: { text: "10x Keys", multiplier: 10, color: "#FFD700" }
+        };
+
+        // Define the segments for drawing, repeating based on desired counts
+        // UPDATED: Spreading out the 0 Keys segments!
+        const spinWheelSegments = [
+            baseSegments.zeroKeys,      // 0 Keys
+            baseSegments.twoX,          // 2x Keys
+            baseSegments.zeroKeys,      // 0 Keys
+            baseSegments.fiveX,         // 5x Keys
+            baseSegments.zeroKeys,      // 0 Keys
+            baseSegments.onePercentLost,// 1% Lost
+            baseSegments.zeroKeys,      // 0 Keys
+            baseSegments.tenX,          // 10x Keys
+            baseSegments.twoX           // 2x Keys
+        ];
+
+        const totalSegmentsCount = spinWheelSegments.length; // This will be 9 (as before, just reordered)
+        const segmentAngleSizeRad = (2 * Math.PI) / totalSegmentsCount; // Angle for each equal slice in radians
+
+        // Categorize segments for luck selection
+        const luckyOutcomes = [
+            baseSegments.twoX, baseSegments.fiveX, baseSegments.tenX
+        ];
+        const unluckyOutcomes = [
+            baseSegments.zeroKeys, baseSegments.onePercentLost
+        ];
+
+        /**
+         * Draws the stationary spin wheel on the canvas.
+         */
+        const drawWheel = () => {
+            if (!ctx || !spinWheelCanvas) return;
+            const centerX = spinWheelCanvas.width / 2;
+            const centerY = spinWheelCanvas.height / 2;
+            const radius = Math.min(centerX, centerY) * 0.95; // Increased radius for larger wheel look
+
+            ctx.clearRect(0, 0, spinWheelCanvas.width, spinWheelCanvas.height);
+
+            let startAngle = 0; // Angles start from the right (0 radians)
+            spinWheelSegments.forEach(segment => {
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, startAngle, startAngle + segmentAngleSizeRad);
+                ctx.lineTo(centerX, centerY);
+                ctx.fillStyle = segment.color;
+                ctx.fill();
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 4;
+                ctx.stroke();
+
+                // Draw text
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate(startAngle + segmentAngleSizeRad / 2); // Rotate to the middle of the segment
+                ctx.textAlign = 'right';
+                ctx.fillStyle = segment.color === "#FFD700" ? "#000" : "#FFF"; // Black text for gold, white for others
+                ctx.font = 'bold 20px Inter';
+                ctx.fillText(segment.text, radius * 0.75, 0); // Position text towards the edge
+                ctx.restore();
+
+                startAngle += segmentAngleSizeRad;
+            });
+
+            // Draw center circle
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius * 0.15, 0, 2 * Math.PI);
+            ctx.fillStyle = '#C0C0C0';
+            ctx.fill();
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        };
+
+        /**
+         * Determines the winning segment based on spin type luck.
+         * @param {'single'|'multi'} spinType
+         * @returns {Object} The chosen segment object.
+         */
+        const selectWinningSegmentBasedOnLuck = (spinType) => {
+            let isLuckyRoll = false;
+            if (spinType === 'single') {
+                isLuckyRoll = Math.random() < 0.10; // 10% lucky
+                console.log(`[selectWinningSegmentBasedOnLuck] Single Spin. Lucky roll: ${isLuckyRoll}`);
+            } else if (spinType === 'multi') {
+                isLuckyRoll = Math.random() < 0.20; // 20% lucky
+                console.log(`[selectWinningSegmentBasedOnLuck] Multi Spin. Lucky roll: ${isLuckyRoll}`);
+            }
+
+            let chosenOutcome;
+            if (isLuckyRoll && luckyOutcomes.length > 0) {
+                chosenOutcome = luckyOutcomes[Math.floor(Math.random() * luckyOutcomes.length)];
+                console.log(`[selectWinningSegmentBasedOnLuck] Decided to be LUCKY. Chosen outcome: ${chosenOutcome.text}`);
+            } else if (unluckyOutcomes.length > 0) {
+                chosenOutcome = unluckyOutcomes[Math.floor(Math.random() * unluckyOutcomes.length)];
+                console.log(`[selectWinningSegmentBasedOnLuck] Decided to be UNLUCKY. Chosen outcome: ${chosenOutcome.text}`);
+            } else {
+                // Fallback if no outcomes defined (should not happen with current setup)
+                chosenOutcome = baseSegments.zeroKeys;
+                console.warn("[selectWinningSegmentBasedOnLuck] No outcomes defined for luck, defaulting to 0 Keys.");
+            }
+            return chosenOutcome;
+        };
+
+        /**
+         * Starts the Spin Wheel game. This function is called after confirmation.
+         * @param {string} spinType - 'single' or 'multi'
+         */
+        const startSpinWheelGame = (spinType) => {
+            console.log(`Starting Spin Wheel game for ${spinType} spin...`);
+            if (spinResultDisplay) spinResultDisplay.textContent = "Spinning...";
+            // Disable spin buttons during the spin
+            if (singleSpinButton) singleSpinButton.disabled = true;
+            if (multiSpinButton) multiSpinButton.disabled = true;
+
+            spinWheel(spinType); // Call spinWheel with the determined spinType
+        };
+
+        /**
+         * Handles the spin action of the wheel.
+         * @param {string} spinType - 'single' or 'multi'
+         */
+        const spinWheel = (spinType) => {
+            let baseBetAmount;
+            if (spinType === 'single') {
+                baseBetAmount = 40; // The fixed cost of a single spin is now the base bet
+            } else if (spinType === 'multi') {
+                baseBetAmount = 400; // The fixed cost of a multi spin is now the base bet
+            }
+            
+            spinWheelState.spinBet = baseBetAmount; // Store this for processSpinResult
+            console.log(`[spinWheel] Spin Type: ${spinType}, Base Bet Amount for calculation determined as: ${baseBetAmount}`);
+
+            if (spinResultDisplay) spinResultDisplay.textContent = "Spinning...";
+
+            if (spinWheelCanvas) {
+                console.log('[spinWheel] spinWheelCanvas element found:', spinWheelCanvas);
+
+                // Determine the target segment based on luck
+                const targetSegment = selectWinningSegmentBasedOnLuck(spinType);
+                console.log(`[spinWheel] Selected target segment for landing: ${JSON.stringify(targetSegment)}`);
+
+                // Find all possible indices for the targetSegment in the drawingSegments array
+                const possibleLandingIndices = [];
+                spinWheelSegments.forEach((segment, index) => {
+                    // Compare by multiplier and text to handle multiple '0 Keys' segments
+                    if (segment.multiplier === targetSegment.multiplier && segment.text === targetSegment.text) {
+                        possibleLandingIndices.push(index);
+                    }
+                });
+
+                if (possibleLandingIndices.length === 0) {
+                    console.error("[spinWheel] No valid landing indices found for target segment. This should not happen!");
+                    showNotification("Spin failed due to internal error.", "error");
+                    processSpinResult(baseSegments.zeroKeys, spinType); // Process a default loss
+                    return;
+                }
+
+                // Choose a random index from the possible landing indices for the visual stop
+                const chosenLandingIndex = possibleLandingIndices[Math.floor(Math.random() * possibleLandingIndices.length)]; 
+                console.log(`[spinWheel] Chosen landing index for visual stop: ${chosenLandingIndex}`);
+
+                // Calculate the center angle of the chosen slice
+                const centerOfTargetSliceRad = (chosenLandingIndex * segmentAngleSizeRad) + (segmentAngleSizeRad / 2);
+                console.log(`[spinWheel] Center of target slice (radians): ${centerOfTargetSliceRad}`);
+
+                // The fixed arrow pointer is at the top (12 o'clock). In radians, this is 270 degrees or 3 * Math.PI / 2.
+                const pointerFixedAngleRad = 3 * Math.PI / 2; // 270 degrees
+                console.log(`[spinWheel] Pointer fixed angle (radians): ${pointerFixedAngleRad}`);
+
+                // Calculate the `rotationNeeded` for the wheel to rotate clockwise
+                // so that the `centerOfTargetSliceRad` aligns with the `pointerFixedAngleRad`.
+                let rotationNeededRad = (pointerFixedAngleRad - centerOfTargetSliceRad + 2 * Math.PI) % (2 * Math.PI);
+                console.log(`[spinWheel] Rotation needed (radians, 0-2PI) to bring target segment to pointer: ${rotationNeededRad}`);
+
+                // Add minimum rotations for visual effect
+                const minRotations = 10; // Ensure at least 10 full spins
+                const totalRotationRad = rotationNeededRad + (minRotations * 2 * Math.PI);
+                const totalRotationDegrees = totalRotationRad * 180 / Math.PI;
+                console.log(`[spinWheel] Total rotation degrees for CSS: ${totalRotationDegrees}`);
+
+                // Apply the rotation to the spinWheelCanvas itself
+                spinWheelCanvas.style.transition = 'none'; // Remove transition for instant reset
+                spinWheelCanvas.style.transform = `rotate(0deg)`; // Reset to 0 degrees
+                console.log('[spinWheel] Canvas transform reset to 0deg.');
+                void spinWheelCanvas.offsetWidth; // Force reflow to apply reset instantly
+                console.log('[spinWheel] Forced reflow after reset.');
+                spinWheelCanvas.style.transition = 'transform 4s cubic-bezier(0.25, 0.1, 0.25, 1)'; // Reapply transition
+                spinWheelCanvas.style.transform = `rotate(${totalRotationDegrees}deg)`;
+                console.log(`[spinWheel] Applied new transform: rotate(${totalRotationDegrees}deg)`);
+
+                spinWheelCanvas.addEventListener('transitionend', function handler() {
+                    console.log('[spinWheel] Transition ended event fired!'); // Crucial debug point
+                    spinWheelCanvas.removeEventListener('transitionend', handler); // Remove listener
+
+                    // Process the result using the `targetSegment` that was determined by luck
+                    console.log(`[spinWheel] Transition ended. Target segment for processing: ${JSON.stringify(targetSegment)}`);
+                    processSpinResult(targetSegment, spinType);
+
+                    // Re-enable spin buttons
+                    if (singleSpinButton) singleSpinButton.disabled = false;
+                    if (multiSpinButton) multiSpinButton.disabled = false;
+                    console.log('[spinWheel] Spin buttons re-enabled.');
+                }, { once: true }); // Ensure event listener runs only once
+            } else {
+                console.error('[spinWheel] spinWheelCanvas element not found!');
+                showNotification("Game elements missing. Please refresh.", "error");
+                // Ensure buttons are re-enabled even if elements are missing
+                if (singleSpinButton) singleSpinButton.disabled = false;
+                if (multiSpinButton) multiSpinButton.disabled = false;
+            }
+        };
+
+        /**
+         * Processes the result of the spin and updates keys.
+         * @param {Object} hitSegment - The segment object that was determined to be the winner.
+         * @param {string} spinType - 'single' or 'multi'
+         */
+        const processSpinResult = (hitSegment, spinType) => {
+            console.log(`[processSpinResult] Keys BEFORE change: ${keys}`); // Debug
+            let message = "";
+            let keysChange = 0;
+            const baseBetAmount = spinWheelState.spinBet; // This is the fixed cost of the spin type
+            console.log(`[processSpinResult] Processing result for segment: ${JSON.stringify(hitSegment)} with base bet (spin cost): ${baseBetAmount}, spin type: ${spinType}`);
+
+            if (hitSegment.multiplier === 0) {
+                keysChange = -baseBetAmount; // Lose the entire base amount (spin cost)
+                message = `You landed on 0 Keys! You lost ${formatNumber(Math.abs(keysChange))} keys!`;
+            } else if (hitSegment.multiplier === -0.01) {
+                keysChange = -Math.floor(baseBetAmount * 0.01); // 1% loss of the base amount (spin cost)
+                message = `Oh no! You lost ${formatNumber(Math.abs(keysChange))} keys (1% of your spin cost)!`;
+            } else {
+                keysChange = baseBetAmount * hitSegment.multiplier;
+                message = `You won ${formatNumber(keysChange)} Keys! (${hitSegment.text})`;
+            }
+            
+            // Apply multiplier for Multi Spin (10+1 bonus)
+            if (spinType === 'multi') {
+                // If it's a win, the bonus applies. If it's a loss, the loss is still just the base amount.
+                // Re-evaluate how you want losses to work with the bonus. Currently, it multiplies the loss too.
+                // For example, if you hit 0x, you lose 400 keys. If you hit 1% loss, you lose 4 keys initially, now 44 keys.
+                // This might be intended, just something to be aware of!
+                keysChange *= 11; 
+                message = `Multi-Spin Result: ${message.replace('Keys!', 'Keys!')} (x11 bonus!)`;
+            }
+
+            keys += keysChange; // Apply the change to total keys
+            console.log(`[processSpinResult] Keys changed by: ${keysChange}, Keys AFTER change: ${keys}`); // Debug
+
+            if (spinResultDisplay) spinResultDisplay.textContent = message;
+            showNotification(message, keysChange > 0 ? 'success' : (keysChange < 0 ? 'error' : 'info'));
+            
+            saveGameState(); // Save updated keys
+            updateUI();
+        };
+
+
+        // --- Event Listeners ---
+        confirmEntryButton.addEventListener('click', handleConfirmEntry);
+        cancelEntryButton.addEventListener('click', handleCancelEntry);
+
+        singleSpinButton.addEventListener('click', () => {
+            // No need to validate input field, cost is fixed
+            showGameEntryConfirmation('Key Spin', 40, startSpinWheelGame, 'single');
+        });
+
+        multiSpinButton.addEventListener('click', () => {
+            // No need to validate input field, cost is fixed
+            showGameEntryConfirmation('Multi Spin (10+1)', 400, startSpinWheelGame, 'multi');
+        });
+
+        // --- Initial Setup on Window Load ---
+        window.addEventListener('load', () => {
+            loadGameState();
+            // Initial draw of the wheel after content is loaded
+            resizeCanvasToParent(spinWheelCanvas, drawWheel);
+        });
+
+        // Add a resize listener to redraw the wheel if the window size changes
+        window.addEventListener('resize', () => {
+            resizeCanvasToParent(spinWheelCanvas, drawWheel);
+        });
+    </script>
+</body>
+</html>

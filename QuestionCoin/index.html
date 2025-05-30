@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coin Tap Master</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<style>
+/* General Body and Background Styling */
+body {
+font-family: 'Inter', sans-serif;
+color: #fff;
+overflow: hidden; /* Prevent scrolling on the main page */
+-webkit-user-select: none; /* Disable text selection */
+-moz-user-select: none;
+-ms-user-select: none;
+user-select: none;
+display: flex;
+flex-direction: column;
+min-height: 100vh;
+background-color: #000; /* Default background color */
+background-size: cover;
+background-position: center;
+transition: background-image 0.5s ease-in-out;
+}
+    .cubic-pattern {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image:
+            repeating-linear-gradient(0deg, #1a0033 0, #1a0033 1px, transparent 1px, transparent 20px),
+            repeating-linear-gradient(90deg, #1a0033 0, #1a0033 1px, transparent 1px, transparent 20px);
+        background-size: 20px 20px;
+        z-index: -2; /* Behind everything */
+        /* New: Glow animation for the cubic pattern */
+        animation: cubic-glow 10s infinite alternate ease-in-out; /* 5s glow, 5s fade = 10s cycle */
+    }
+
+    @keyframes cubic-glow {
+        0% {
+            opacity: 0.2; /* Faded state */
+            box-shadow: 0 0 10px rgba(138, 43, 226, 0); /* No glow */
+        }
+        50% {
+            opacity: 0.6; /* Glowing state */
+            box-shadow: 0 0 40px 20px rgba(138, 43, 226, 0.7); /* Strong purple glow */
+        }
+        100% {
+            opacity: 0.2; /* Faded state */
+            box-shadow: 0 0 10px rgba(138, 43, 226, 0); /* No glow */
+        }
+    }
+
+    .btn-tap-animation:active {
+        transform: scale(0.95);
+        transition: transform 0.1s ease-out;
+    }
+
+    /* Coin Animation */
+    .coin-animation {
+        position: absolute;
+        font-size: 2rem;
+        color: gold;
+        text-shadow: 0 0 8px rgba(255, 215, 0, 0.7);
+        animation: coin-fly 1s ease-out forwards;
+        pointer-events: none;
+        z-index: 10;
+    }
+
+    @keyframes coin-fly {
+        0% {
+            transform: translate(0, 0) scale(1);
+            opacity: 1;
+        }
+        100% {
+            transform: translate(var(--x), var(--y)) scale(0.5);
+            opacity: 0;
+        }
+    }
+
+    /* Notification Styling */
+    .notification {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 15px 25px;
+        border-radius: 10px;
+        z-index: 1001;
+        opacity: 0;
+        transition: opacity 0.5s ease-in-out;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        pointer-events: none;
+    }
+    .notification.show {
+        opacity: 1;
+        pointer-events: auto;
+    }
+    .notification.success {
+        border: 2px solid #34D399; /* Green */
+    }
+    .notification.error {
+        border: 2px solid #EF4444; /* Red */
+    }
+    .notification.info {
+        border: 2px solid #8B5CF6; /* Purple */
+    }
+
+    /* Name Input Modal */
+    .name-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.9);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+        transition: opacity 0.3s ease;
+    }
+
+    .name-modal-content {
+        background-color: #1a1a2e;
+        padding: 2rem;
+        border-radius: 15px;
+        text-align: center;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+        border: 2px solid #8A2BE2;
+        width: 90%;
+        max-width: 400px;
+    }
+
+    .name-modal-content input {
+        background-color: #333;
+        border: 1px solid #555;
+        padding: 0.75rem;
+        border-radius: 8px;
+        color: #fff;
+        width: 100%;
+        max-width: 250px;
+        margin-bottom: 1rem;
+        font-size: 1.1rem;
+        text-align: center; /* Center the text in the input */
+    }
+
+    .name-modal-content button {
+        background-color: #00FF00;
+        color: #1A1A2E;
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background-color 0.2s ease, transform 0.1s ease;
+        border: none;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    }
+    .name-modal-content button:hover {
+        background-color: #00E600;
+        transform: translateY(-2px);
+    }
+
+    /* Upgrade Modal */
+    .upgrade-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.9);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+        transition: opacity 0.3s ease;
+    }
+
+    .upgrade-modal-content {
+        background-color: #1a1a2e;
+        padding: 2rem;
+        border-radius: 15px;
+        text-align: center;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+        border: 2px solid #8A2BE2;
+        width: 90%;
+        max-width: 450px;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        position: relative; /* Needed for absolute positioning of close button */
+    }
+
+    .upgrade-modal-content button {
+        background-color: #8A2BE2; /* Purple for upgrade button */
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background-color 0.2s ease, transform 0.1s ease;
+        border: none;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+    .upgrade-modal-content button:hover {
+        background-color: #7a1ee1; /* Slightly darker purple on hover */
+        transform: translateY(-2px);
+    }
+    .upgrade-modal-content button:disabled {
+        background-color: #555;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .upgrade-modal-content .close-button {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        color: #aaa;
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+    .upgrade-modal-content .close-button:hover {
+        color: #fff;
+    }
+
+    /* Purple Circle Styles */
+    .purple-circle {
+        background-color: #8A2BE2; /* Primary purple color */
+        border-radius: 50%;
+        box-shadow: 0 0 20px rgba(138, 43, 226, 0.6), 0 0 40px rgba(138, 43, 226, 0.4);
+        cursor: pointer;
+        transform-origin: center center;
+        position: relative; /* For absolute positioning of tap value */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+</style>
+</head>
+<body class="bg-black text-white flex flex-col h-screen">
+<div class="cubic-pattern"></div>
+<div id="name-input-modal" class="name-modal-overlay hidden">
+    <div class="name-modal-content">
+        <h2 class="text-2xl font-bold text-yellow-400 mb-4">Welcome, Bro! What's your name?</h2>
+        <input type="text" id="player-name-input" placeholder="Enter your name" maxlength="20">
+        <button id="save-name-button">Let's Go!</button>
+    </div>
+</div>
+
+<div id="upgrade-modal" class="upgrade-modal-overlay hidden">
+    <div class="upgrade-modal-content">
+        <button class="close-button" id="close-upgrade-modal">&times;</button>
+        <h2 class="text-2xl font-bold text-yellow-400 mb-4">Upgrade Tap Power!</h2>
+        <p class="text-lg text-gray-300">
+            Current Tap Power: <span class="font-bold text-green-400"> +<span id="current-tap-power">1</span> Coins per tap</span>
+        </p>
+        <p class="text-lg text-gray-300">
+            Next Upgrade Level: <span class="font-bold text-purple-300"> Level <span id="next-upgrade-level">1</span></span>
+        </p>
+        <p class="text-lg text-gray-300 flex items-center justify-center gap-2">
+            Cost: <span class="font-bold text-yellow-400 flex items-center"><i class="fas fa-coins mr-1"></i><span id="upgrade-cost">20</span></span>
+        </p>
+        <button id="buy-upgrade-button">
+            <i class="fas fa-arrow-up"></i> Buy Upgrade
+        </button>
+    </div>
+</div>
+
+
+<header class="flex justify-between items-center p-4 z-10 w-full">
+    <div class="flex flex-col items-start space-y-1 bg-gray-800 p-2 rounded-xl border border-purple-700">
+        <div class="flex items-center space-x-2">
+            <img src="https://i.ibb.co/CQRHj6W/coin-tap-master-logo.png" alt="Coin Tap Master Logo" class="h-8 w-8 sm:h-10 sm:w-10">
+            <div class="flex flex-col">
+                <span class="text-lg sm:text-xl font-bold text-yellow-400" id="player-name-display">Player!</span>
+                <span class="text-sm sm:text-base text-gray-300" id="player-level-display">Level: 1 (Stone)</span>
+            </div>
+        </div>
+        <div class="flex items-center space-x-1 mt-2 text-sm text-green-400">
+            <i class="fas fa-coins"></i>
+            <span class="font-semibold">PPH(C):</span>
+            <span id="pph-c-display">0</span>
+        </div>
+        <div class="flex items-center space-x-1 text-sm text-green-400">
+            <span class="text-yellow-400 text-lg">🔑</span>
+            <span class="font-semibold">PPH(K):</span>
+            <span id="pph-k-display">0</span>
+        </div>
+    </div>
+
+    <div class="flex flex-col space-y-2 items-end">
+        <div class="flex items-center space-x-1 p-2 rounded-xl bg-gray-800 text-sm">
+            <i class="fas fa-coins text-yellow-400"></i>
+            <span id="coins-display-header" class="font-semibold text-yellow-400">0</span>
+        </div>
+        <div class="flex items-center space-x-1 p-2 rounded-xl bg-gray-800 text-sm">
+            <span class="text-yellow-400 text-lg">🔑</span>
+            <span id="keys-display-header" class="font-semibold text-yellow-400">0</span>
+        </div>
+    </div>
+</header>
+
+<main class="flex-grow flex flex-col items-center justify-center p-4 z-10 relative">
+    <div class="flex items-center space-x-2 mb-4 p-2 rounded-xl bg-gray-800 text-lg sm:text-xl">
+        <i class="fas fa-coins text-yellow-400"></i>
+        <span id="coins-display-main" class="font-bold text-yellow-400">0</span>
+    </div>
+
+    <div id="coin-tap-area"
+        class="purple-circle w-48 h-48 sm:w-64 sm:h-64 cursor-pointer transform transition-transform duration-100 ease-out active:scale-95"
+        draggable="false">
+        <div id="tap-value-display"
+            class="text-4xl sm:text-5xl font-extrabold text-white pointer-events-none drop-shadow-lg">
+            +1
+        </div>
+    </div>
+
+    <button id="upgrade-button" class="mt-8 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-full shadow-lg transition-transform duration-100 ease-out active:scale-95 flex items-center gap-2">
+        <i class="fas fa-arrow-alt-circle-up"></i> Upgrade Tap
+    </button>
+
+    <p class="text-gray-300 text-lg mt-8 text-center">Tap the coin to earn more and get rich, dude!</p>
+</main>
+
+<div id="notification-container" class="notification hidden"></div>
+
+<nav class="flex justify-around items-center w-full bg-gray-900 p-2 fixed bottom-0 left-0 rounded-t-2xl shadow-inner shadow-purple-900 z-10">
+    <a href="card.html" class="flex flex-col items-center p-2 text-purple-400 hover:text-purple-300 transition-colors btn-tap-animation w-1/4">
+        <i class="fas fa-credit-card text-2xl mb-1"></i>
+        <span class="text-xs">Cards</span>
+    </a>
+    <a href="games.html" class="flex flex-col items-center p-2 text-purple-400 hover:text-purple-300 transition-colors btn-tap-animation w-1/4">
+        <i class="fas fa-gamepad text-2xl mb-1"></i>
+        <span class="text-xs">Games</span>
+    </a>
+    <a href="market.html" class="flex flex-col items-center p-2 text-purple-400 hover:text-purple-300 transition-colors btn-tap-animation w-1/4">
+        <i class="fas fa-store text-2xl mb-1"></i>
+        <span class="text-xs">Market</span>
+    </a>
+    <a href="airdrop.html" class="flex flex-col items-center p-2 text-purple-400 hover:text-purple-300 transition-colors btn-tap-animation w-1/4">
+        <i class="fas fa-plane-departure text-2xl mb-1"></i>
+        <span class="text-xs">Airdrop</span>
+    </a>
+</nav>
+
+<script type="module">
+    console.log('Script started: index.html');
+
+    // Global Game State Variables (loaded from localStorage)
+    let coins = 0;
+    let keys = 0;
+    let tapValue = 1; // Base tap value, will be affected by levels and upgrades
+    let playerName = 'Player';
+    let currentLevelIndex = 0; // Index of the current level in the levels array
+    let tapUpgradeLevel = 0; // Level of tap power upgrade, adds +1 to base tap value
+    let upgradeCost = 20; // Initial cost for the first tap upgrade
+    // NEW: Profit per hour variables
+    let profitPerHourCoins = 0; // This will accumulate from card upgrades etc.
+    let profitPerHourKeys = 0;   // This will accumulate from card upgrades etc.
+
+    // DOM Elements
+    const body = document.body;
+    // Removed: const levelBackground = document.getElementById('level-background');
+    const coinsDisplayHeader = document.getElementById('coins-display-header');
+    const keysDisplayHeader = document.getElementById('keys-display-header');
+    const coinsDisplayMain = document.getElementById('coins-display-main'); // New: Main coin counter
+    const coinTapArea = document.getElementById('coin-tap-area'); // Changed from coinImage
+    const tapValueDisplay = document.getElementById('tap-value-display');
+    const notificationContainer = document.getElementById('notification-container');
+    const playerNameDisplay = document.getElementById('player-name-display');
+    const playerLevelDisplay = document.getElementById('player-level-display');
+    // NEW: PPH display elements
+    const pphCDisplay = document.getElementById('pph-c-display');
+    const pphKDisplay = document.getElementById('pph-k-display');
+
+    // Name Input Modal Elements
+    const nameInputModal = document.getElementById('name-input-modal');
+    const playerNameInput = document.getElementById('player-name-input');
+    const saveNameButton = document.getElementById('save-name-button');
+
+    // Upgrade Modal Elements
+    const upgradeButton = document.getElementById('upgrade-button');
+    const upgradeModal = document.getElementById('upgrade-modal');
+    const closeUpgradeModalButton = document.getElementById('close-upgrade-modal');
+    const currentTapPowerDisplay = document.getElementById('current-tap-power');
+    const nextUpgradeLevelDisplay = document.getElementById('next-upgrade-level');
+    const upgradeCostDisplay = document.getElementById('upgrade-cost');
+    const buyUpgradeButton = document.getElementById('buy-upgrade-button');
+
+    // --- Level Configuration ---
+    // Note: Background images are removed from here as per your request.
+    // The main cubic pattern will handle the visual background.
+    const levels = [
+        {
+            name: "Stone Coin (Worthless)",
+            minCoins: 0,
+            maxCoins: 10000,
+            baseTapValue: 1,
+            notification: "You're just starting with a stone coin, dude! Keep tapping!"
+        },
+        {
+            name: "Copper Coin",
+            minCoins: 10001,
+            maxCoins: 100000,
+            baseTapValue: 5,
+            notification: "Whoa, a Copper Coin! You're leveling up, bro!"
+        },
+        {
+            name: "Silver Coin",
+            minCoins: 100001,
+            maxCoins: 1000000,
+            baseTapValue: 25,
+            notification: "Shiny! You've reached Silver Coin status, nice!"
+        },
+        {
+            name: "Gold Coin",
+            minCoins: 1000001,
+            maxCoins: 5000000,
+            baseTapValue: 100,
+            notification: "Baller! You're now tapping Gold Coins, let's get rich!"
+        },
+        {
+            name: "Diamond",
+            minCoins: 5000001,
+            maxCoins: 10000000,
+            baseTapValue: 500,
+            notification: "Sparkling! You're collecting Diamonds, you're a real gem!"
+        },
+        {
+            name: "Ruby",
+            minCoins: 10000001,
+            maxCoins: 100000000,
+            baseTapValue: 2500,
+            notification: "Fiery! Rubies are flowing, you're unstoppable!"
+        },
+        {
+            name: "Dragon Coin",
+            minCoins: 100000001,
+            maxCoins: 500000000,
+            baseTapValue: 10000,
+            notification: "Legendary! You've unearthed the Dragon Coin, bro!"
+        },
+        {
+            name: "Question Coin",
+            minCoins: 500000001,
+            maxCoins: Infinity, // No upper limit for the final level
+            baseTapValue: 50000,
+            notification: "Mysterious! What secrets does the Question Coin hold, dude?"
+        }
+    ];
+
+    // --- Utility Functions ---
+    const formatNumber = (num) => {
+        if (num === null || num === undefined) return 'N/A';
+        if (num >= 1000000000) return (num / 1000000000).toFixed(1) + 'B';
+        if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+        if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+        return num.toLocaleString();
+    };
+
+    const showNotification = (message, type = 'info') => {
+        console.log(`Notification: ${message} (Type: ${type})`);
+        if (notificationContainer) {
+            notificationContainer.textContent = message;
+            notificationContainer.classList.remove('success', 'error', 'info');
+            notificationContainer.classList.add('show', type);
+            setTimeout(() => {
+                notificationContainer.classList.remove('show');
+            }, 3000);
+        }
+    };
+
+    // --- Game State Management (Local Storage) ---
+    const saveGameState = () => {
+        const gameState = {
+            coins: coins,
+            keys: keys,
+            playerName: playerName,
+            currentLevelIndex: currentLevelIndex,
+            tapUpgradeLevel: tapUpgradeLevel, // Save upgrade level
+            upgradeCost: upgradeCost, // Save upgrade cost
+            profitPerHourCoins: profitPerHourCoins, // NEW: Save PPH(C)
+            profitPerHourKeys: profitPerHourKeys     // NEW: Save PPH(K)
+        };
+        try {
+            localStorage.setItem('coinTapMasterState', JSON.stringify(gameState));
+            console.log("Game state saved:", gameState);
+        } catch (e) {
+            console.error("Error saving game state to localStorage:", e);
+            showNotification("Error saving game data! Your progress might not be saved correctly.", "error");
+        }
+    };
+
+    const loadGameState = () => {
+        console.log('Attempting to load game state from localStorage...');
+        try {
+            const savedState = localStorage.getItem('coinTapMasterState');
+            if (savedState) {
+                const gameState = JSON.parse(savedState);
+                coins = gameState.coins !== undefined ? gameState.coins : 0;
+                keys = gameState.keys !== undefined ? gameState.keys : 0;
+                playerName = (gameState.playerName && gameState.playerName !== 'Player') ? gameState.playerName : 'Player';
+                currentLevelIndex = gameState.currentLevelIndex !== undefined ? gameState.currentLevelIndex : 0;
+                tapUpgradeLevel = gameState.tapUpgradeLevel !== undefined ? gameState.tapUpgradeLevel : 0; // Load upgrade level
+                upgradeCost = gameState.upgradeCost !== undefined ? gameState.upgradeCost : 20; // Load upgrade cost
+                profitPerHourCoins = gameState.profitPerHourCoins !== undefined ? gameState.profitPerHourCoins : 0; // NEW: Load PPH(C)
+                profitPerHourKeys = gameState.profitPerHourKeys !== undefined ? gameState.profitPerHourKeys : 0;     // NEW: Load PPH(K)
+
+                console.log("Game state loaded successfully:", { coins, keys, playerName, currentLevelIndex, tapUpgradeLevel, upgradeCost, profitPerHourCoins, profitPerHourKeys });
+            } else {
+                console.log("No saved game state found in localStorage. Initializing with default values.");
+                coins = 0;
+                keys = 0;
+                playerName = 'Player';
+                currentLevelIndex = 0;
+                tapUpgradeLevel = 0;
+                upgradeCost = 20;
+                profitPerHourCoins = 0;
+                profitPerHourKeys = 0;
+            }
+        } catch (e) {
+            console.error("Error loading game state from localStorage:", e);
+            showNotification("Error loading game data! Your progress might not be saved correctly.", "error");
+            coins = 0;
+            keys = 0;
+            playerName = 'Player';
+            currentLevelIndex = 0;
+            tapUpgradeLevel = 0;
+            upgradeCost = 20;
+            profitPerHourCoins = 0;
+            profitPerHourKeys = 0;
+        }
+        // After loading, update the level and UI based on current coins and upgrades
+        updateLevel();
+        updateTapValueAndUI(); // Separate function to update tap value and UI
+        // Removed: startBackgroundAnimation(); // No longer needed for level backgrounds
+    };
+
+    // --- Level System Update ---
+    const updateLevel = (showNotificationOnLevelUp = false) => {
+        const previousLevelIndex = currentLevelIndex;
+
+        // Find the correct level based on current coins
+        let newLevelIndex = 0;
+        for (let i = levels.length - 1; i >= 0; i--) {
+            if (coins >= levels[i].minCoins) {
+                newLevelIndex = i;
+                break;
+            }
+        }
+
+        currentLevelIndex = newLevelIndex;
+
+        // Update UI elements
+        const currentLevel = levels[currentLevelIndex];
+        playerLevelDisplay.textContent = `Level: ${currentLevelIndex + 1} (${currentLevel.name})`;
+        // Removed: levelBackground.style.backgroundImage = currentLevel.background;
+        // Removed: levelBackground.classList.toggle('glowing');
+
+        // Only show notification if the level has actually changed and requested
+        if (showNotificationOnLevelUp && currentLevelIndex > previousLevelIndex) {
+            showNotification(currentLevel.notification, 'info');
+        }
+
+        updateTapValueAndUI(); // Recalculate tap value based on new level and upgrades
+        saveGameState(); // Save state after level update
+    };
+
+    // --- Tap Value and UI Update ---
+    const updateTapValueAndUI = () => {
+        const currentLevel = levels[currentLevelIndex];
+        // Tap value is baseTapValue from current level + tapUpgradeLevel (+1 for each upgrade)
+        tapValue = currentLevel.baseTapValue + tapUpgradeLevel;
+        tapValueDisplay.textContent = `+${formatNumber(tapValue)}`;
+        currentTapPowerDisplay.textContent = formatNumber(tapValue);
+
+        // Update upgrade modal values
+        nextUpgradeLevelDisplay.textContent = tapUpgradeLevel + 1;
+        upgradeCostDisplay.textContent = formatNumber(upgradeCost);
+
+        // Update button state
+        if (coins >= upgradeCost) {
+            buyUpgradeButton.disabled = false;
+            buyUpgradeButton.style.backgroundColor = '#00FF00'; // Green when enabled
+            buyUpgradeButton.style.color = '#1A1A2E';
+        } else {
+            buyUpgradeButton.disabled = true;
+            buyUpgradeButton.style.backgroundColor = '#555'; // Grey when disabled
+            buyUpgradeButton.style.color = 'white';
+        }
+
+        updateCoinAndKeyDisplays(); // Ensure coin/key displays are updated
+    };
+
+    // --- Coin and Key Display Updates ---
+    const updateCoinAndKeyDisplays = () => {
+        coinsDisplayHeader.textContent = formatNumber(coins);
+        coinsDisplayMain.textContent = formatNumber(coins);
+        keysDisplayHeader.textContent = formatNumber(keys);
+        pphCDisplay.textContent = formatNumber(profitPerHourCoins);
+        pphKDisplay.textContent = formatNumber(profitPerHourKeys);
+    };
+
+    // --- Game Logic ---
+    const tapCoin = (event) => {
+        coins += tapValue;
+        updateCoinAndKeyDisplays();
+        updateLevel(true); // Check for level up after each tap
+        saveGameState();
+        createCoinAnimation(event);
+    };
+
+    const createCoinAnimation = (event) => {
+        const coinAnimation = document.createElement('div');
+        coinAnimation.classList.add('coin-animation');
+        coinAnimation.textContent = `+${formatNumber(tapValue)}`;
+        body.appendChild(coinAnimation);
+
+        // Get bounds of the tap area for relative positioning
+        const tapRect = coinTapArea.getBoundingClientRect();
+        // Calculate the starting position relative to the viewport
+        const startX = event.clientX;
+        const startY = event.clientY;
+
+        coinAnimation.style.left = `${startX}px`;
+        coinAnimation.style.top = `${startY}px`;
+
+        // Randomize target position
+        const endX = startX + (Math.random() - 0.5) * 200; // -100 to +100 from current X
+        const endY = startY - 100 - Math.random() * 100; // Fly upwards
+
+        coinAnimation.style.setProperty('--x', `${endX - startX}px`);
+        coinAnimation.style.setProperty('--y', `${endY - startY}px`);
+
+        coinAnimation.addEventListener('animationend', () => {
+            coinAnimation.remove();
+        });
+    };
+
+    // --- Event Listeners ---
+    coinTapArea.addEventListener('click', tapCoin);
+    coinTapArea.addEventListener('dragstart', (e) => e.preventDefault()); // Prevent dragging of the coin image
+
+    // Name Input Modal
+    saveNameButton.addEventListener('click', () => {
+        const inputName = playerNameInput.value.trim();
+        if (inputName) {
+            playerName = inputName;
+            playerNameDisplay.textContent = `${playerName}!`;
+            saveGameState();
+            nameInputModal.classList.add('hidden');
+            showNotification(`Welcome to the Coin Tap Master, ${playerName}!`, 'success');
+        } else {
+            showNotification("Please enter your name, bro!", "error");
+        }
+    });
+
+    // Upgrade Modal
+    upgradeButton.addEventListener('click', () => {
+        upgradeModal.classList.remove('hidden');
+        updateTapValueAndUI(); // Ensure values are up-to-date when modal opens
+    });
+
+    closeUpgradeModalButton.addEventListener('click', () => {
+        upgradeModal.classList.add('hidden');
+    });
+
+    buyUpgradeButton.addEventListener('click', () => {
+        if (coins >= upgradeCost) {
+            coins -= upgradeCost;
+            tapUpgradeLevel++; // Increment tap upgrade level by 1
+            // Increase upgrade cost by 3x each time
+            upgradeCost = Math.floor(upgradeCost * 3);
+            showNotification(`Tap power upgraded to Level ${tapUpgradeLevel + 1}!`, 'success');
+            updateTapValueAndUI(); // Recalculate tap value and update UI
+            updateCoinAndKeyDisplays();
+            saveGameState();
+        } else {
+            showNotification("Not enough coins for this upgrade, dude!", "error");
+        }
+    });
+
+    // Initial Load
+    window.addEventListener('load', () => {
+        loadGameState();
+        // Show name input modal if name is still 'Player' or empty after load
+        if (playerName === 'Player' || !playerName.trim()) {
+            nameInputModal.classList.remove('hidden');
+        } else {
+            playerNameDisplay.textContent = `${playerName}!`;
+        }
+    });
+
+    // Auto-save game state every 10 seconds (optional, but good for persistence)
+    setInterval(saveGameState, 10000); // Save every 10 seconds
+</script>
+</body>
+</html>

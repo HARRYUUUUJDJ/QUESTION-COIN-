@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Games - Coin Tap Master</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* General Body and Background Styling */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #000;
+            color: #fff;
+            overflow-y: auto; /* Allow scrolling for content */
+            -webkit-user-select: none; /* Disable text selection */
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            display: flex; /* Use flexbox for overall layout */
+            flex-direction: column;
+            min-height: 100vh; /* Ensure it takes full viewport height */
+        }
+        .cubic-pattern {
+            position: fixed; /* Changed to fixed to cover entire viewport */
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                repeating-linear-gradient(0deg, #1a0033 0, #1a0033 1px, transparent 1px, transparent 20px),
+                repeating-linear-gradient(90deg, #1a0033 0, #1a0033 1px, transparent 1px, transparent 20px);
+            background-size: 20px 20px;
+            animation: glow-fade 10s infinite alternate;
+            z-index: -1;
+        }
+        @keyframes glow-fade {
+            0%, 10% { opacity: 0.2; }
+            50% { opacity: 0.8; }
+            90%, 100% { opacity: 0.2; }
+        }
+        .btn-tap-animation:active {
+            transform: scale(0.95);
+            transition: transform 0.1s ease-out;
+        }
+
+        /* Notification Styling */
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            z-index: 1001;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            pointer-events: none; /* Allow clicks to pass through when hidden */
+        }
+        .notification.show {
+            opacity: 1;
+            pointer-events: auto; /* Enable clicks when shown */
+        }
+        .notification.success {
+            border: 2px solid #34D399; /* Green */
+        }
+        .notification.error {
+            border: 2px solid #EF4444; /* Red */
+        }
+        .notification.info {
+            border: 2px solid #8B5CF6; /* Purple */
+        }
+
+        /* Main content flex grow to push nav to bottom */
+        main {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1rem; /* Adjust padding for smaller screens if needed */
+        }
+
+        /* Games Grid Specific Styling */
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            width: 100%;
+            max-width: 1200px;
+            justify-content: center;
+            margin-top: 1rem; /* Adjust spacing from header */
+        }
+
+        .game-card {
+            background-color: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(8px);
+            border-radius: 20px;
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            position: relative; /* For overlay and info button */
+            overflow: hidden; /* Ensure overlay respects border-radius */
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            height: 300px; /* Increased height for consistent cards */
+        }
+
+        .game-card:hover:not(.locked) {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .game-icon {
+            font-size: 3.5rem;
+            margin-bottom: 0.75rem;
+            color: #8A2BE2; /* Purple icon */
+            text-shadow: 0 0 10px rgba(138, 43, 226, 0.5);
+        }
+
+        .game-card h3 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #E2B2FF;
+            margin-bottom: 0.5rem;
+        }
+
+        .game-card p {
+            font-size: 0.95rem;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 1rem;
+            flex-grow: 1; /* Pushes button to bottom */
+            overflow: hidden; /* Prevent overflow if description is too long */
+            text-overflow: ellipsis; /* Add ellipsis for long descriptions */
+        }
+
+        .play-button {
+            background-color: #00FF00; /* Bright Green */
+            color: #1A1A2E; /* Dark text for contrast */
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            border: none;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            position: relative; /* Added for z-index */
+            z-index: 2; /* Ensures button is above the overlay */
+            width: 90%; /* Make button wider */
+        }
+
+        .play-button:hover:not(:disabled) {
+            background-color: #00E600;
+            transform: translateY(-2px);
+        }
+        .play-button:active:not(:disabled) {
+            transform: scale(0.95);
+        }
+        .play-button:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+            opacity: 0.6;
+            box-shadow: none;
+        }
+
+        /* Info Button Styling */
+        .info-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(138, 43, 226, 0.7); /* Purple transparent */
+            color: white;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            z-index: 3; /* Ensure it's above other elements */
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .info-button:hover {
+            background-color: #8A2BE2; /* Solid purple on hover */
+            transform: scale(1.05);
+        }
+        .info-button:active {
+            transform: scale(0.95);
+        }
+
+        /* --- Overlay Styles --- */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7); /* Transparent black */
+            display: flex;
+            flex-direction: column; /* To stack text and potentially icon */
+            justify-content: center;
+            align-items: center;
+            border-radius: 20px; /* Match card radius */
+            pointer-events: none; /* Default: allow clicks to pass through */
+            transition: opacity 0.3s ease;
+            opacity: 0; /* Hidden by default */
+            padding: 1rem; /* Add some padding for text */
+        }
+
+        /* Overlay for 'coming_soon' games (button is disabled, so overlay can block) */
+        .game-card.locked .overlay {
+            opacity: 1; /* Visible */
+            pointer-events: auto; /* Blocks clicks on the card */
+        }
+
+        /* Overlay for key requirements (button is enabled, so overlay should NOT block button clicks) */
+        .game-card .overlay.active-requirement {
+            opacity: 1; /* Visible */
+            pointer-events: none; /* Allows clicks to pass through to elements beneath it (like the button) */
+        }
+
+
+        .overlay-text {
+            color: #FFD700; /* Golden text */
+            font-size: 1.6rem; /* Slightly smaller for multi-line */
+            font-weight: bold;
+            text-shadow: 0 0 15px rgba(255, 215, 0, 0.7);
+            text-align: center;
+            line-height: 1.3;
+            margin-top: 10px; /* Space from potential icon */
+        }
+        .overlay-icon {
+            font-size: 2.5rem;
+            color: #FFD700;
+            margin-bottom: 0.5rem;
+        }
+
+
+        /* --- Modal Styles --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.85); /* Slightly darker overlay for modal */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background-color: #1A1A2E;
+            border-radius: 20px;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+            max-width: 400px;
+            width: 90%;
+            border: 2px solid #8A2BE2; /* Purple border */
+            position: relative;
+        }
+
+        .modal-content h3 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #FFD700;
+            margin-bottom: 1.5rem;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        .modal-content p {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .modal-buttons button {
+            background-color: #00FF00;
+            color: #1A1A2E;
+            padding: 0.8rem 1.5rem;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            border: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        .modal-buttons button.secondary {
+            background-color: #555;
+            color: #fff;
+        }
+        .modal-buttons button:hover:not(:disabled) {
+            background-color: #00E600;
+            transform: translateY(-2px);
+        }
+        .modal-buttons button.secondary:hover:not(:disabled) {
+            background-color: #777;
+        }
+        .modal-buttons button:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+        .modal-buttons button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+    </style>
+</head>
+<body class="bg-black text-white flex flex-col h-screen">
+    <div class="cubic-pattern"></div>
+    <header class="flex justify-between items-center p-4 z-10 w-full">
+        <a href="index.html" class="flex items-center space-x-2 p-2 rounded-xl bg-gray-800 hover:bg-gray-700 transition-colors btn-tap-animation">
+            <i class="fas fa-arrow-left text-purple-400"></i>
+            <span class="text-sm font-semibold text-purple-400">Back</span>
+        </a>
+        <h1 class="text-2xl font-bold text-purple-400">Mini Games</h1>
+        <div class="flex flex-col space-y-2 items-end">
+            <div class="flex items-center space-x-1 p-2 rounded-xl bg-gray-800 text-sm">
+                <i class="fas fa-coins text-yellow-400"></i>
+                <span id="coins-display-header" class="font-semibold text-yellow-400">0</span>
+            </div>
+            <div class="flex items-center space-x-1 p-2 rounded-xl bg-gray-800 text-sm">
+                <span class="text-yellow-400 text-lg">🔑</span>
+                <span id="keys-display-header" class="font-semibold text-yellow-400">0</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow flex flex-col items-center p-4 z-10 overflow-y-auto">
+        <p class="text-gray-300 text-lg mb-8 text-center">Get ready for some fun and earn more coins and keys!</p>
+
+        <div class="games-grid" id="games-grid"></div>
+    </main>
+
+    <div id="notification-container" class="notification hidden"></div>
+
+    <div id="game-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="modal-title"></h3>
+            <p id="modal-message"></p>
+            <div id="modal-buttons" class="modal-buttons">
+            </div>
+        </div>
+    </div>
+
+    <nav class="flex justify-around items-center w-full bg-gray-900 p-2 fixed bottom-0 left-0 rounded-t-2xl shadow-inner shadow-purple-900 z-10">
+        <a href="card.html" class="flex flex-col items-center p-2 text-purple-400 hover:text-purple-300 transition-colors btn-tap-animation w-1/4">
+            <i class="fas fa-credit-card text-2xl mb-1"></i>
+            <span class="text-xs">Cards</span>
+        </a>
+        <a href="games.html" class="flex flex-col items-center p-2 text-purple-400 hover:text-purple-300 transition-colors btn-tap-animation w-1/4">
+            <i class="fas fa-gamepad text-2xl mb-1"></i>
+            <span class="text-xs">Games</span>
+        </a>
+        <a href="market.html" class="flex flex-col items-center p-2 text-purple-400 hover:text-purple-300 transition-colors btn-tap-animation w-1/4">
+            <i class="fas fa-store text-2xl mb-1"></i>
+            <span class="text-xs">Market</span>
+        </a>
+        <a href="airdrop.html" class="flex flex-col items-center p-2 text-purple-400 hover:text-purple-300 transition-colors btn-tap-animation w-1/4">
+            <i class="fas fa-plane-departure text-2xl mb-1"></i>
+            <span class="text-xs">Airdrop</span>
+        </a>
+    </nav>
+
+    <script type="module">
+        console.log('Script started: games.html'); // Debugging log
+
+        // Global Game State Variables (loaded from localStorage)
+        let coins = 0;
+        let keys = 0;
+
+        // DOM Elements
+        const coinsDisplayHeader = document.getElementById('coins-display-header');
+        const keysDisplayHeader = document.getElementById('keys-display-header');
+        const notificationContainer = document.getElementById('notification-container');
+        const gamesGrid = document.getElementById('games-grid'); // Get the grid container
+
+        // --- Modal DOM Elements (NEW) ---
+        const gameModal = document.getElementById('game-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMessage = document.getElementById('modal-message');
+        const modalButtons = document.getElementById('modal-buttons');
+
+
+        // --- Utility Functions ---
+        /**
+         * Formats a number for display, adding K, M, B suffixes.
+         * @param {number} num - The number to format.
+         * @returns {string} The formatted string.
+         */
+        const formatNumber = (num) => {
+            if (num === null || num === undefined) return 'N/A';
+            if (num >= 1000000000) return (num / 1000000000).toFixed(1) + 'B';
+            if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+            return num.toLocaleString();
+        };
+
+        /**
+         * Displays a temporary notification message to the user.
+         * @param {string} message - The message to display.
+         * @param {'info'|'success'|'error'} type - The type of notification (for styling).
+         */
+        const showNotification = (message, type = 'info') => {
+            console.log(`Notification: ${message} (Type: ${type})`);
+            if (notificationContainer) {
+                notificationContainer.textContent = message;
+                notificationContainer.className = `notification show ${type}`;
+                setTimeout(() => {
+                    notificationContainer.classList.remove('show');
+                }, 3000); // Hide after 3 seconds
+            }
+        };
+
+        // --- Game State Management (Local Storage) ---
+        /**
+         * Loads game state (coins, keys) from localStorage.
+         * Initializes with defaults if no saved state is found or if parsing fails.
+         */
+        const loadGameState = () => {
+            console.log('Attempting to load game state from localStorage...');
+            try {
+                const savedState = localStorage.getItem('coinTapMasterState');
+                if (savedState) {
+                    const gameState = JSON.parse(savedState);
+                    coins = gameState.coins !== undefined ? gameState.coins : 0;
+                    keys = gameState.keys !== undefined ? gameState.keys : 0;
+                    console.log("Game state loaded successfully:", { coins, keys });
+                } else {
+                    console.log("No saved game state found in localStorage. Initializing with default values (0 coins, 0 keys).");
+                    coins = 0;
+                    keys = 0;
+                }
+            } catch (e) {
+                console.error("Error loading game state from localStorage:", e);
+                showNotification("Error loading game data! Your progress might not be saved correctly.", "error");
+                coins = 0; // Fallback to default values if loading fails
+                keys = 0;
+            }
+            updateUI(); // Update UI immediately after loading state
+        };
+
+        /**
+         * Updates all UI elements that display coins and keys.
+         */
+        const updateUI = () => {
+            console.log(`Updating UI with Coins: ${coins}, Keys: ${keys}`);
+            if (coinsDisplayHeader) coinsDisplayHeader.textContent = formatNumber(coins);
+            if (keysDisplayHeader) keysDisplayHeader.textContent = formatNumber(keys);
+        };
+
+
+        // --- Game Data Configuration (UPDATED) ---
+        const gamesData = [
+            {
+                id: 'spin-wheel',
+                name: 'Lucky Spin Wheel',
+                icon: 'fas fa-spinner',
+                path: 'play1.html',
+                description: 'Spin for a chance to multiply your keys! Min bet 20 Keys.',
+                info: 'Test your luck and win big! The higher the bet, the greater the potential reward. This game is all about chance, so cross your fingers, bro!',
+                keyRequirement: 40, // Changed to 40 keys for entry
+                type: 'basic'
+            },
+            {
+                id: 'be-safe',
+                name: 'Be Safe (Tile Explorer)',
+                icon: 'fas fa-th-large',
+                path: 'play2.html',
+                description: 'Uncover safe tiles, avoid the mines!',
+                info: 'A classic game of risk and reward. Choose your difficulty, then try to uncover all the safe tiles without hitting a hidden mine. The more tiles you clear, the more keys you earn!',
+                keyRequirement: 0, // No direct key requirement for entry, handled by difficulty selection later
+                type: 'difficulty_select'
+            },
+            {
+                id: 'ball-drop', // Swapped ID
+                name: 'Ball Drop', // Swapped Name
+                icon: 'fas fa-golf-ball', // Using a golf ball icon as an example
+                path: 'play4.html', // Original path for Ball Drop
+                description: 'Drop balls and hit multipliers for keys!', // Updated description
+                info: 'Drop the ball from the top and watch it bounce its way down through pegs to land in multiplier slots at the bottom. It’s pure physics fun with a chance to boost your keys!',
+                keyRequirement: 0, // Now playable, no key requirement for entry
+                type: 'basic' // Now a basic playable game
+            },
+            {
+                id: 'invest-earn', // Swapped ID
+                name: 'Invest & Earn (Rocket)', // Swapped Name
+                icon: 'fas fa-rocket',
+                path: 'play3.html', // Original path for Invest & Earn
+                description: 'Invest keys globally to launch the rocket and double your fuel! Coming Soon!', // Updated description
+                info: 'Join a global investment pool to launch a rocket. The more players invest, the higher the rocket goes, and the more fuel (keys) you can earn! It’s a community effort with explosive rewards!',
+                keyRequirement: null, // Set to null as it's coming soon
+                type: 'coming_soon' // Now coming soon
+            },
+            {
+                id: 'dragon-run',
+                name: 'Dragon Run',
+                icon: 'fas fa-dragon', // Dragon icon example
+                path: 'play5.html',
+                description: 'Jump and collect, avoid the bombs! Global leaderboard! Coming Soon!',
+                info: 'A fast-paced endless runner! Guide your dragon through a treacherous landscape, jumping over obstacles and collecting coins. Compete for the top spot on the global leaderboard!',
+                keyRequirement: null,
+                type: 'coming_soon'
+            },
+            {
+                id: 'flappy-bird',
+                name: 'Flappy Bird',
+                icon: 'fas fa-feather-alt', // Feather icon example
+                path: 'play6.html',
+                description: 'Tap to fly, avoid the pipes! Global leaderboard! Coming Soon!',
+                info: 'The classic, addictive tapping game! Tap to make your bird fly through gaps in pipes. It sounds simple, but it’s a real challenge! Can you beat the high score and claim a spot on the global leaderboard?',
+                keyRequirement: null,
+                type: 'coming_soon'
+            }
+        ];
+
+        // --- Modal Functions (NEW) ---
+        const openModal = (title, message, buttonsHtml) => {
+            modalTitle.textContent = title;
+            modalMessage.innerHTML = message; // Use innerHTML for richer content if needed
+            modalButtons.innerHTML = buttonsHtml;
+            gameModal.classList.add('active');
+        };
+
+        const closeModal = () => {
+            gameModal.classList.remove('active');
+        };
+
+        // Event listener for clicking outside the modal to close it
+        gameModal.addEventListener('click', (event) => {
+            if (event.target === gameModal) {
+                closeModal();
+            }
+        });
+
+        // Expose closeModal to the global scope so inline onclick works
+        window.closeModal = closeModal;
+
+
+        // --- Dynamic Card Generation (NEW) ---
+        const renderGameCards = () => {
+            console.log('Rendering game cards. Current keys (inside renderGameCards):', keys); // Debugging log
+            gamesGrid.innerHTML = ''; // Clear existing cards
+
+            gamesData.forEach(game => {
+                const card = document.createElement('div');
+                card.className = 'game-card';
+                let isLockedByComingSoon = false; // Flag for 'coming_soon' status
+                let hasKeyRequirementOverlay = false; // Flag for key requirement overlay
+                let overlayContent = '';
+                let playButtonText = 'Play Now'; // Default button text
+
+                // Determine 'coming_soon' lock state
+                if (game.type === 'coming_soon') {
+                    isLockedByComingSoon = true;
+                    overlayContent = `<i class="overlay-icon fas fa-hourglass-start"></i><span class="overlay-text">Coming Soon!</span>`;
+                    card.classList.add('locked'); // Add 'locked' class for 'coming_soon' styling/behavior
+                    playButtonText = 'Coming Soon';
+                }
+                // Determine if key requirement overlay is needed (only if not 'coming_soon')
+                else if (game.keyRequirement !== null && game.keyRequirement > 0 && keys < game.keyRequirement) {
+                    hasKeyRequirementOverlay = true;
+                    overlayContent = `<i class="overlay-icon fas fa-key"></i><span class="overlay-text">Requires ${game.keyRequirement} Keys!</span>`;
+                    // Do NOT add 'locked' class here, as we want the button visible.
+                    // We'll add a different class for the overlay to be active.
+                }
+
+                card.innerHTML = `
+                    <button class="info-button" data-game-id="${game.id}">i</button>
+                    <div class="game-icon"><i class="${game.icon}"></i></div>
+                    <h3>${game.name}</h3>
+                    <p>${game.description}</p>
+                    <button class="play-button" data-game-id="${game.id}" ${isLockedByComingSoon ? 'disabled' : ''}>${playButtonText}</button>
+                    ${(isLockedByComingSoon || hasKeyRequirementOverlay) ? `<div class="overlay ${hasKeyRequirementOverlay ? 'active-requirement' : ''}">${overlayContent}</div>` : ''}
+                `;
+
+                const playButton = card.querySelector('.play-button');
+                if (playButton) {
+                    playButton.addEventListener('click', () => handlePlayGame(game.id, game.path, game.keyRequirement));
+                }
+
+                const infoButton = card.querySelector('.info-button');
+                if (infoButton) {
+                    infoButton.addEventListener('click', () => showGameInfo(game.id));
+                }
+
+                gamesGrid.appendChild(card);
+            });
+        };
+
+        // --- Handle Play Button Click Logic (UPDATED) ---
+        const handlePlayGame = (gameId, gamePath, keyRequirement) => {
+            console.log(`Attempting to play game: ${gameId}, Current Keys: ${keys}, Required: ${keyRequirement}`);
+
+            // Handle "Coming Soon" games first
+            const game = gamesData.find(g => g.id === gameId);
+            if (game && game.type === 'coming_soon') {
+                showNotification("This game is coming soon, dude! Stay tuned!", 'info');
+                return; // Stop execution if coming soon
+            }
+
+            // Check key requirements for specific games that have them (only if requirement is positive)
+            if (keyRequirement !== null && keyRequirement > 0 && keys < keyRequirement) {
+                openModal('Key Requirement!', `You need at least ${keyRequirement} Keys to play this, bro!`,
+                    `<button class="secondary" onclick="closeModal()">Got It</button>`);
+                return; // Stop execution if keys are insufficient
+            }
+
+            // Special handling for "Be Safe" (Tile Explorer) for difficulty selection
+            if (gameId === 'be-safe') {
+                const buttonsHtml = `
+                    <button onclick="location.href='${gamePath}?difficulty=easy'">Easy (3x3 Tiles, 5 Keys)</button>
+                    <button onclick="location.href='${gamePath}?difficulty=medium'">Normal (6x6 Tiles, 15 Keys)</button>
+                    <button onclick="location.href='${gamePath}?difficulty=hard'">Hard (9x9 Tiles, 30 Keys)</button>
+                    <button class="secondary" onclick="closeModal()">Cancel</button>
+                `;
+                openModal('Choose Difficulty', 'Which adventure will you dare to explore, dude? (Entry fees apply per game)', buttonsHtml);
+            } else {
+                // For any other game that passed checks, navigate directly
+                location.href = gamePath;
+            }
+        };
+
+        // --- Show Game Info Function (NEW) ---
+        const showGameInfo = (gameId) => {
+            const game = gamesData.find(g => g.id === gameId);
+            if (game) {
+                let infoMessage = game.info;
+                if (game.keyRequirement !== null && game.keyRequirement > 0) {
+                    infoMessage += `<br><br><strong>Entry Cost:</strong> ${game.keyRequirement} Keys`;
+                }
+                openModal(game.name, infoMessage, `<button class="secondary" onclick="closeModal()">Close</button>`);
+            }
+        };
+
+
+        // --- Initial Setup on Window Load ---
+        window.onload = () => {
+            console.log('window.onload fired for games.html.');
+            loadGameState(); // Load state for header display (coins and keys)
+            console.log('Keys value AFTER loadGameState and BEFORE renderGameCards:', keys); // NEW LOG ADDED HERE
+            renderGameCards(); // Then render cards based on loaded keys
+            console.log('Initial load complete for games.html.');
+        };
+    </script>
+</body>
+</html>

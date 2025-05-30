@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ball Drop - Coin Tap Master</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* General Body and Background Styling */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #000;
+            color: #fff;
+            overflow-y: auto; /* Allow scrolling for content */
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        .cubic-pattern {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                repeating-linear-gradient(0deg, #1a0033 0, #1a0033 1px, transparent 1px, transparent 20px),
+                repeating-linear-gradient(90deg, #1a0033 0, #1a0033 1px, transparent 1px, transparent 20px);
+            background-size: 20px 20px;
+            animation: glow-fade 10s infinite alternate;
+            z-index: -1;
+        }
+        @keyframes glow-fade {
+            0%, 10% { opacity: 0.2; }
+            50% { opacity: 0.8; }
+            90%, 100% { opacity: 0.2; }
+        }
+        .btn-tap-animation:active {
+            transform: scale(0.95);
+            transition: transform 0.1s ease-out;
+        }
+
+        /* Notification Styling */
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            z-index: 1001;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            pointer-events: none;
+            min-width: 250px;
+            text-align: center;
+        }
+        .notification.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .notification.success { border: 2px solid #34D399; }
+        .notification.error { border: 2px solid #EF4444; }
+        .notification.info { border: 2px solid #8B5CF6; }
+
+        /* Game Container - Centralized and max-width controlled */
+        .game-container {
+            background-color: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(8px);
+            border-radius: 20px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            margin-top: 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            /* Control the container's width directly in CSS */
+            width: 95%; /* Take up most of the screen width */
+            max-width: 750px; /* Set a hard max-width for the container itself */
+            margin-left: auto; /* Center the container */
+            margin-right: auto; /* Center the container */
+        }
+
+        /* Canvas Styling - Let CSS control visual size, JS sets drawing resolution */
+        canvas {
+            background-color: #1a0033; /* Dark purple background for canvas */
+            border-radius: 15px;
+            border: 2px solid #8A2BE2; /* Purple border */
+            box-shadow: inset 0 0 15px rgba(138, 43, 226, 0.5);
+            margin-bottom: 1.5rem;
+            touch-action: none; /* Prevent default touch actions like scrolling/zooming */
+            /* IMPORTANT: Set visual width to 100% of parent, height auto to maintain aspect ratio */
+            width: 100%;
+            height: auto;
+            display: block; /* Ensures it behaves like a block element for width/height */
+        }
+
+        /* Game UI */
+        .game-ui {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            width: 100%;
+        }
+
+        .drop-buttons-container {
+            display: flex;
+            flex-wrap: wrap; /* Allow buttons to wrap on smaller screens */
+            justify-content: center;
+            gap: 1rem;
+            width: 100%;
+        }
+
+        .drop-button {
+            padding: 1rem 1.5rem;
+            border-radius: 15px;
+            font-weight: 700;
+            font-size: 1rem; /* Slightly smaller for multiple buttons */
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+            flex-grow: 1; /* Allow buttons to grow and fill space */
+            min-width: 150px; /* Minimum width for buttons */
+        }
+        .drop-button:hover:not(:disabled) {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+        }
+        .drop-button:active:not(:disabled) {
+            transform: scale(0.95);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        .drop-button:disabled {
+            background: #555 !important; /* Override specific button colors */
+            cursor: not-allowed;
+            opacity: 0.6;
+            box-shadow: none;
+        }
+
+        /* Specific button styles */
+        .normal-ball-button {
+            background: linear-gradient(45deg, #008CBA, #007bb5); /* Blueish */
+            color: #fff;
+        }
+        .golden-ball-button {
+            background: linear-gradient(45deg, #FFD700, #FFA500); /* Gold to Orange */
+            color: #1A1A2E;
+        }
+        .purple-ball-button {
+            background: linear-gradient(45deg, #9c27b0, #8c1e9c); /* Purple */
+            color: #fff;
+        }
+
+
+        /* Score & Keys Display */
+        .score-display {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #FFD700; /* Gold */
+            text-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 0.5rem 1rem;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem; /* Added margin for spacing */
+        }
+
+        /* Modal specific styles (from games.html) */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-content {
+            background-color: #1A1A2E;
+            border-radius: 20px;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+            max-width: 400px;
+            width: 90%;
+            border: 2px solid #8A2BE2;
+            position: relative;
+        }
+        .modal-content h3 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #FFD700;
+            margin-bottom: 1.5rem;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+        .modal-content p {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 1.5rem;
+        }
+        .modal-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        .modal-buttons button {
+            background-color: #00FF00;
+            color: #1A1A2E;
+            padding: 0.8rem 1.5rem;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            border: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        .modal-buttons button.secondary {
+            background-color: #555;
+            color: #fff;
+        }
+        .modal-buttons button:hover:not(:disabled) { background-color: #00E600; transform: translateY(-2px); }
+        .modal-buttons button.secondary:hover:not(:disabled) { background-color: #777; }
+        .modal-buttons button:active:not(:disabled) { transform: scale(0.98); }
+        .modal-buttons button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    </style>
+</head>
+<body class="bg-black text-white flex flex-col h-screen">
+    <div class="cubic-pattern"></div>
+    <header class="flex justify-between items-center p-4 z-10 w-full">
+        <a href="games.html" class="flex items-center space-x-2 p-2 rounded-xl bg-gray-800 hover:bg-gray-700 transition-colors btn-tap-animation">
+            <i class="fas fa-arrow-left text-purple-400"></i>
+            <span class="text-sm font-semibold text-purple-400">Back</span>
+        </a>
+        <h1 class="text-2xl font-bold text-purple-400">Ball Drop</h1>
+        <div class="flex flex-col space-y-2 items-end">
+            <div class="flex items-center space-x-1 p-2 rounded-xl bg-gray-800 text-sm">
+                <i class="fas fa-coins text-yellow-400"></i>
+                <span id="coins-display-header" class="font-semibold text-yellow-400">0</span>
+            </div>
+            <div class="flex items-center space-x-1 p-2 rounded-xl bg-gray-800 text-sm">
+                <span class="text-yellow-400 text-lg">🔑</span>
+                <span id="keys-display-header" class="font-semibold text-yellow-400">0</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow flex flex-col items-center p-4 z-10 overflow-y-auto">
+        <p class="text-gray-300 text-lg mb-8 text-center">Drop the ball and hit those multipliers to earn keys!</p>
+
+        <div class="game-container">
+            <canvas id="gameCanvas"></canvas>
+            <div class="game-ui">
+                <div class="score-display">
+                    Keys Earned in this Round: <span id="current-score">0</span>
+                </div>
+                <div class="drop-buttons-container">
+                    <button id="normal-ball-button" class="drop-button normal-ball-button btn-tap-animation" data-type="normal">
+                        Drop Normal Ball (10 keys)
+                    </button>
+                    <button id="golden-ball-button" class="drop-button golden-ball-button btn-tap-animation" data-type="golden">
+                        Drop Golden Ball (50 keys)
+                    </button>
+                    <button id="purple-ball-button" class="drop-button purple-ball-button btn-tap-animation" data-type="purple">
+                        Drop Purple Ball (100 keys)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="notification-container" class="notification hidden"></div>
+
+    <div id="game-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="modal-title"></h3>
+            <p id="modal-message"></p>
+            <div id="modal-buttons" class="modal-buttons">
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // --- Global Game State Variables (loaded from localStorage) ---
+        const LOCAL_STORAGE_MAIN_GAME_STATE_KEY = 'coinTapMasterState'; // Key for main game state
+        let coins = 0;
+        let keys = 0;
+        let currentScore = 0; // Keys earned in the current round
+
+        // --- DOM Elements ---
+        const coinsDisplayHeader = document.getElementById('coins-display-header');
+        const keysDisplayHeader = document.getElementById('keys-display-header');
+        const currentScoreDisplay = document.getElementById('current-score');
+        const notificationContainer = document.getElementById('notification-container');
+        const gameCanvas = document.getElementById('gameCanvas');
+        const ctx = gameCanvas.getContext('2d'); // Get context here once
+
+        // New ball drop buttons
+        const normalBallButton = document.getElementById('normal-ball-button');
+        const goldenBallButton = document.getElementById('golden-ball-button');
+        const purpleBallButton = document.getElementById('purple-ball-button');
+
+        // Modal elements
+        const gameModal = document.getElementById('game-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMessage = document.getElementById('modal-message');
+        const modalButtons = document.getElementById('modal-buttons');
+
+        // === Config & Globals ===
+        const GRAVITY = 0.5; // Slightly increased gravity for faster falls
+        const BOUNCE_DAMPING = 0.5; // Further reduced for less "bouncy" walls, helps containment
+        const BALL_RADIUS = 10; // Slightly reduced ball radius
+        const SLOT_HEIGHT = 50;
+        const PEG_RADIUS = 5; // Re-added for peg creation
+
+        let balls = [];
+        let pegs = [];
+        let slots = [];
+        let redirectTargetXCoords = []; // Array to hold X-coordinates of slot centers for redirect pegs
+
+        let animationFrameId = null;
+
+        // --- Utility Functions ---
+        const formatNumber = (num) => {
+            if (num === null || num === undefined) return 'N/A';
+            if (num >= 1000000000) return (num / 1000000000).toFixed(1) + 'B';
+            if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+            return num.toLocaleString();
+        };
+
+        const showNotification = (message, type = 'info') => {
+            if (notificationContainer) {
+                notificationContainer.textContent = message;
+                notificationContainer.className = `notification show ${type}`;
+                setTimeout(() => {
+                    notificationContainer.classList.remove('show');
+                }, 3000);
+            }
+        };
+
+        // --- Modal Functions ---
+        const openModal = (title, message, buttonsHtml) => {
+            modalTitle.textContent = title;
+            modalMessage.innerHTML = message;
+            modalButtons.innerHTML = buttonsHtml;
+            gameModal.classList.add('active');
+        };
+
+        const closeModal = () => {
+            gameModal.classList.remove('active');
+        };
+
+        gameModal.addEventListener('click', (event) => {
+            if (event.target === gameModal) {
+                closeModal();
+            }
+        });
+
+        // --- Game State Management (Local Storage) ---
+        const loadGameState = () => {
+            try {
+                const savedState = localStorage.getItem(LOCAL_STORAGE_MAIN_GAME_STATE_KEY);
+                if (savedState) {
+                    const gameState = JSON.parse(savedState);
+                    coins = gameState.coins !== undefined ? gameState.coins : 0;
+                    keys = gameState.keys !== undefined ? gameState.keys : 0;
+                } else {
+                    coins = 0;
+                    keys = 1000; // Give some starting keys for testing if no state is found
+                }
+            } catch (e) {
+                console.error("Error loading game state:", e);
+                showNotification("Error loading game data! Progress might be affected.", "error");
+                coins = 0; keys = 0;
+            }
+        };
+
+        const saveGameState = () => {
+            try {
+                const gameState = {
+                    coins: coins,
+                    keys: keys,
+                };
+                localStorage.setItem(LOCAL_STORAGE_MAIN_GAME_STATE_KEY, JSON.stringify(gameState));
+            } catch (e) {
+                console.error("Error saving game state:", e);
+                showNotification("Error saving game data! Progress might not be saved.", "error");
+            }
+        };
+
+        const updateUI = () => {
+            coinsDisplayHeader.textContent = formatNumber(coins);
+            keysDisplayHeader.textContent = formatNumber(keys);
+            currentScoreDisplay.textContent = formatNumber(currentScore);
+
+            // Update button disabled states based on keys
+            normalBallButton.disabled = keys < parseInt(normalBallButton.dataset.cost || 10); // Default cost if not set
+            goldenBallButton.disabled = keys < parseInt(goldenBallButton.dataset.cost || 50);
+            purpleBallButton.disabled = keys < parseInt(purpleBallButton.dataset.cost || 100);
+        };
+
+        // === Ball Drawing ===
+        function drawBall(ball) {
+            ctx.beginPath();
+            ctx.fillStyle = ball.color;
+            ctx.shadowColor = ball.shadowColor;
+            ctx.shadowBlur = 12;
+            ctx.arc(ball.x, ball.y, BALL_RADIUS, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.closePath();
+            ctx.shadowBlur = 0; // Reset shadow
+        }
+
+        // === Physics & Collision Update ===
+        function updateBallPosition() {
+            balls = balls.filter(ball => ball.active);
+
+            balls.forEach((ball, index) => {
+                // Gravity
+                ball.dy += GRAVITY;
+
+                // Update position
+                ball.x += ball.dx;
+                ball.y += ball.dy;
+
+                // Wall collisions - clamping position to prevent escaping
+                if (ball.x + BALL_RADIUS > gameCanvas.width) {
+                    ball.x = gameCanvas.width - BALL_RADIUS; // Clamp to right edge
+                    ball.dx *= -BOUNCE_DAMPING; // Reverse direction and dampen
+                } else if (ball.x - BALL_RADIUS < 0) {
+                    ball.x = BALL_RADIUS; // Clamp to left edge
+                    ball.dx *= -BOUNCE_DAMPING; // Reverse direction and dampen
+                }
+
+                if (ball.y - BALL_RADIUS < 0) { // Top wall
+                    ball.y = BALL_RADIUS; // Clamp to top edge
+                    ball.dy *= -BOUNCE_DAMPING;
+                }
+
+                // Peg collisions
+                pegs.forEach(peg => {
+                    const dx = ball.x - peg.x;
+                    const dy = ball.y - peg.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const minDist = BALL_RADIUS + PEG_RADIUS; // Use PEG_RADIUS constant
+
+                    if (dist < minDist) {
+                        // Prevent collision too soon after spawn (prevents immediate sticking)
+                        if (Date.now() - ball.spawnTime < 100) {
+                            return; // Skip collision resolution for a brief moment
+                        }
+
+                        // --- Re-integrating Redirect Peg Logic ---
+                        if (peg.isRedirect) {
+                            const targetX = redirectTargetXCoords[peg.targetSlotIndex];
+                            if (targetX !== undefined) {
+                                const strength = 0.05; // How strongly to guide it horizontally
+                                ball.dx = (targetX - ball.x) * strength;
+                                ball.dy = Math.max(ball.dy, 8); // Ensure it keeps falling rapidly
+                                showNotification(`Redirected to ${slots[peg.targetSlotIndex].displayText} slot!`, 'info');
+                            }
+                        } else {
+                            // Original peg collision response
+                            const angle = Math.atan2(dy, dx);
+                            const speed = Math.sqrt(ball.dx ** 2 + ball.dy ** 2);
+
+                            // Separate balls to prevent sticking
+                            const overlap = minDist - dist;
+                            ball.x += Math.cos(angle) * overlap;
+                            ball.y += Math.sin(angle) * overlap;
+
+                            // Reflect velocity (basic elastic collision)
+                            // Only reflect if ball is moving towards the peg
+                            const dotProduct = ball.dx * Math.cos(angle) + ball.dy * Math.sin(angle);
+                            if (dotProduct < 0) {
+                                ball.dx = Math.cos(angle) * speed * BOUNCE_DAMPING;
+                                ball.dy = Math.sin(angle) * speed * BOUNCE_DAMPING;
+                            }
+                        }
+
+                        // Ensure a minimum downward velocity after *any* peg collision
+                        // And add a small horizontal jitter to prevent perfect vertical falls
+                        if (ball.dy < 5) ball.dy = 5; // Stronger downward push
+                        ball.dx += (Math.random() - 0.5) * 2; // Small horizontal jitter
+                    }
+                });
+
+                // Keep ball falling down if it's not near the bottom and slowing down
+                if (ball.y + BALL_RADIUS < gameCanvas.height - SLOT_HEIGHT && ball.dy < 3.0) {
+                    ball.dy = 3.0;
+                }
+
+                // Landing in slot
+                if (ball.y + BALL_RADIUS >= gameCanvas.height - SLOT_HEIGHT && ball.active) {
+                    ball.active = false;
+                    handleBallLanding(ball);
+                }
+            });
+        }
+
+        // === Ball Landing Logic ===
+        function handleBallLanding(ball) {
+            let landedInSlot = false;
+            slots.forEach(slot => {
+                if (ball.x > slot.x && ball.x < slot.x + slot.width) {
+                    const earnedCoins = Math.round(ball.baseValue * slot.multiplier);
+                    coins += earnedCoins;
+                    currentScore += earnedCoins; // Update score with coins earned
+                    showNotification(`Landed in ${slot.displayText} slot! You earned ${formatNumber(earnedCoins)} coins!`, 'success');
+                    landedInSlot = true;
+                }
+            });
+
+            if (!landedInSlot) {
+                showNotification("Ball landed outside a slot. No coins earned this time, dude!", 'info');
+            }
+
+            saveGameState(); // Save updated coins
+            updateUI(); // Update UI
+        }
+
+        // === Game Loop ===
+        function animate() {
+            ctx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+
+            drawPegs();
+            drawSlots();
+
+            balls.forEach(ball => {
+                if (ball.active) drawBall(ball);
+            });
+
+            updateBallPosition();
+
+            if (balls.some(b => b.active)) {
+                animationFrameId = requestAnimationFrame(animate);
+            } else {
+                cancelAnimationFrame(animationFrameId); // Ensure previous frame is cancelled
+                animationFrameId = null;
+            }
+        }
+
+        // === Drop Ball Function (generic) ===
+        function dropBalls(numBalls, cost, color, shadowColor, ballBaseValueMultiplier) {
+            if (keys < cost) { // Changed from coins to keys for cost
+                openModal('Not Enough Keys!', `You need ${formatNumber(cost)} Keys to drop this ball type, dude! You only have ${formatNumber(keys)} keys.`,
+                    `<button class="secondary" onclick="closeModal()">Got It</button>`);
+                return;
+            }
+
+            if (animationFrameId !== null && balls.some(ball => ball.active)) {
+                showNotification("Wait for the current balls to land, bro!", 'info');
+                return;
+            }
+
+            keys -= cost; // Deduct keys
+            saveGameState();
+            updateUI();
+            currentScore = 0; // Reset score for the new round of drops
+            currentScoreDisplay.textContent = formatNumber(currentScore); // Update immediately
+
+            const startX = gameCanvas.width / 2;
+
+            for (let i = 0; i < numBalls; i++) {
+                balls.push({
+                    x: startX + (Math.random() - 0.5) * 10, // FURTHER REDUCED random spread for initial horizontal velocity
+                    y: BALL_RADIUS * 2, // Start slightly below top edge
+                    dx: (Math.random() - 0.5) * 2, // FURTHER REDUCED initial horizontal velocity
+                    dy: 4, // Initial downward velocity
+                    active: true,
+                    baseValue: (cost * ballBaseValueMultiplier) / numBalls,
+                    color,
+                    shadowColor,
+                    spawnTime: Date.now()
+                });
+            }
+
+            if (animationFrameId === null) {
+                animate();
+            }
+        }
+
+        // === Game setup ===
+        const setupCanvas = () => {
+            const gameContainer = document.querySelector('.game-container');
+            // Check if gameContainer exists before trying to get its style
+            if (!gameContainer) {
+                console.error("Error: .game-container element not found!");
+                return; // Exit if container not found
+            }
+
+            // Get the actual rendered width of the gameContainer's content area
+            const containerContentWidth = gameContainer.clientWidth; // clientWidth gives inner width (content + padding)
+
+            // Define a hard maximum desired width for the canvas itself
+            const MAX_CANVAS_WIDTH = 700; 
+            
+            // The canvas's *drawing* width should be the minimum of the container's content width and our defined max width
+            let canvasDrawingWidth = Math.min(containerContentWidth, MAX_CANVAS_WIDTH);
+
+            // Apply the "more square" aspect ratio (width * 0.75 for 4:3)
+            let calculatedDrawingHeight = canvasDrawingWidth * 0.75; // Increased multiplier for more height!
+
+            // Ensure a minimum height if the calculated height is too small
+            const MIN_CANVAS_HEIGHT = 400; // Adjusted min height to match the new aspect ratio (700 * 0.75 = 525, so 400 is a safe floor)
+            if (calculatedDrawingHeight < MIN_CANVAS_HEIGHT) {
+                calculatedDrawingHeight = MIN_CANVAS_HEIGHT;
+                // If height is clamped, recalculate width to maintain the aspect ratio
+                canvasDrawingWidth = calculatedDrawingHeight / 0.75; // Use new multiplier here too
+            }
+
+            // Set the canvas's internal drawing buffer dimensions
+            gameCanvas.width = canvasDrawingWidth;
+            gameCanvas.height = calculatedDrawingHeight;
+
+            // --- DEBUG LOGS FOR CANVAS SIZE ---
+            console.log("--- Canvas Setup Debug ---");
+            console.log("gameContainer.clientWidth:", gameContainer.clientWidth);
+            console.log("MAX_CANVAS_WIDTH:", MAX_CANVAS_WIDTH);
+            console.log("Final canvasDrawingWidth set:", gameCanvas.width);
+            console.log("Final canvasDrawingHeight set:", gameCanvas.height);
+            console.log("--- End Canvas Setup Debug ---");
+            // --- END DEBUG LOGS ---
+
+            createSlots(); // Call createSlots after canvas dimensions are set
+            redirectTargetXCoords = slots.map(slot => slot.x + slot.width / 2);
+        };
+
+        const createPegs = () => {
+            pegs = [];
+            // Adjusted spacing to be relative to the new canvas size
+            const spacingX = gameCanvas.width / 12; // More pegs horizontally for wider screen
+            const spacingY = gameCanvas.height / 10; // Adjust vertical spacing based on height
+            const startY = BALL_RADIUS * 2 + 10; // Start pegs slightly below ball drop point
+
+            for (let row = 0; row < 10; row++) { // Still 10 rows
+                const numColsInRow = (row % 2 === 0) ? 12 : 11; // More columns for wider screen
+                const offsetX = (gameCanvas.width - (numColsInRow - 1) * spacingX) / 2; // Center pegs
+
+                for (let col = 0; col < numColsInRow; col++) {
+                    const x = col * spacingX + offsetX;
+                    const y = startY + row * spacingY;
+
+                    let isRedirectPeg = false;
+                    let targetSlotIndex = -1;
+
+                    // --- Re-integrating Redirect Peg Logic ---
+                    // Example: Make pegs in row 3 (index 2) and row 6 (index 5) redirect pegs
+                    if (row === 2 || row === 5) {
+                        // Make specific pegs redirect to the 5x slot (index 2 in the [1x, 0x, 5x, 0x, 1x] array)
+                        // Adjust these conditions to target specific columns if desired
+                        if (col === Math.floor(numColsInRow / 2) || col === Math.floor(numColsInRow / 2) - 1) {
+                            isRedirectPeg = true;
+                            targetSlotIndex = 2; // Target the 5x slot (index 2)
+                        } else if (col === 0 || col === numColsInRow - 1) {
+                            isRedirectPeg = true;
+                            targetSlotIndex = (col === 0) ? 0 : slots.length - 1; // Target 1x slots
+                        }
+                    }
+                    // --- End Re-integrated Redirect Peg Logic ---
+
+                    // Ensure pegs are within canvas bounds
+                    if (x > PEG_RADIUS && x < gameCanvas.width - PEG_RADIUS &&
+                        y > PEG_RADIUS && y < gameCanvas.height - SLOT_HEIGHT - PEG_RADIUS) {
+                        pegs.push({ x, y, radius: PEG_RADIUS, isRedirect: isRedirectPeg, targetSlotIndex: targetSlotIndex });
+                    }
+                }
+            }
+        };
+
+        // === Drawing Functions (updated for redirect pegs) ===
+        const drawPegs = () => {
+            ctx.clearRect(0, 0, gameCanvas.width, gameCanvas.height); // Clear canvas inside drawPegs to prevent ghosting on resize
+            pegs.forEach(peg => {
+                ctx.beginPath();
+                ctx.arc(peg.x, peg.y, peg.radius, 0, Math.PI * 2);
+                if (peg.isRedirect) {
+                    ctx.fillStyle = '#FFFF00'; // Bright yellow for redirect pegs
+                    ctx.shadowColor = 'rgba(255, 255, 0, 0.7)'; // Yellow glow
+                    ctx.shadowBlur = 8;
+                } else {
+                    ctx.fillStyle = 'gray'; // Original gray for normal pegs
+                    ctx.shadowColor = 'rgba(128, 128, 128, 0.5)';
+                    ctx.shadowBlur = 5;
+                }
+                ctx.fill();
+                ctx.shadowBlur = 0; // Reset shadow
+            });
+        };
+
+        const createSlots = () => {
+            slots = [];
+            const count = 5; // Still 5 slots
+            const slotWidth = gameCanvas.width / count;
+            const slotY = gameCanvas.height - SLOT_HEIGHT;
+
+            // MODIFIED: New multipliers and display texts for the desired slot layout: [1x, 0x, 5x, 0x, 1x]
+            const multipliers = [1, 0, 5, 0, 1];
+            const displayTexts = ["1x", "0x", "5x", "0x", "1x"];
+
+            for (let i = 0; i < count; i++) {
+                const x = i * slotWidth;
+                slots.push({
+                    x: x,
+                    width: slotWidth,
+                    y: slotY,
+                    height: SLOT_HEIGHT,
+                    multiplier: multipliers[i],
+                    displayText: displayTexts[i]
+                });
+            }
+        };
+
+        const drawSlots = () => {
+            slots.forEach(slot => {
+                ctx.fillStyle = '#2a003f'; // Dark purple for slots background
+                ctx.fillRect(slot.x, slot.y, slot.width, slot.height);
+                ctx.strokeStyle = '#5d008d'; // Lighter purple border
+                ctx.lineWidth = 2;
+                ctx.strokeRect(slot.x, slot.y, slot.width, slot.height);
+
+                ctx.fillStyle = 'white'; // Text color
+                ctx.font = 'bold 20px Inter'; // Using Inter font
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(slot.displayText, slot.x + slot.width / 2, slot.y + slot.height / 2);
+            });
+        };
+
+        // === Event Handlers (calling the new dropBalls function) ===
+        const handleDropBallsButton = (event) => { // Renamed to avoid conflict with generic dropBalls
+            const type = event.currentTarget.dataset.type;
+            let cost = 0;
+            let color = '';
+            let shadow = '';
+            let numBalls = 0;
+            let ballBaseValueMultiplier = 1;
+
+            if (type === 'normal') {
+                cost = 10;
+                color = '#008CBA';
+                shadow = 'rgba(0, 140, 186, 0.7)';
+                numBalls = 1; // Only 1 ball for normal
+                ballBaseValueMultiplier = 1;
+            } else if (type === 'golden') {
+                cost = 50;
+                color = 'gold';
+                shadow = 'orange';
+                numBalls = 5;
+                ballBaseValueMultiplier = 0.5; // LOWER success rate/profit
+            } else if (type === 'purple') {
+                cost = 100;
+                color = 'purple';
+                shadow = 'violet';
+                numBalls = 5;
+                ballBaseValueMultiplier = 1.5; // HIGHER luck/profit
+            }
+
+            dropBalls(numBalls, cost, color, shadow, ballBaseValueMultiplier);
+        };
+
+
+        // === Initial Setup ===
+        const initGame = () => {
+            loadGameState();
+            setupCanvas();
+            createPegs(); // createPegs now relies on redirectTargetXCoords from setupCanvas/createSlots
+            updateUI(); // Initial UI update
+
+            // Draw the initial empty board
+            ctx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+            drawPegs(); // This will also draw slots as it's called first
+            // drawSlots(); // No need to call again here
+
+            // Event listeners for the ball drop buttons
+            normalBallButton.addEventListener('click', handleDropBallsButton);
+            goldenBallButton.addEventListener('click', handleDropBallsButton);
+            purpleBallButton.addEventListener('click', handleDropBallsButton);
+
+            // Handle canvas resize
+            window.addEventListener('resize', () => {
+                // Clear any existing animation frames before resizing
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                }
+                balls = []; // Clear any active balls on resize for simplicity
+                currentScore = 0;
+                updateUI();
+                setupCanvas(); // Re-run setupCanvas to get new dimensions and recreate slots
+                createPegs(); // Recreate pegs based on new canvas size and updated redirectTargetXCoords
+                // No need to clearRect or drawPegs/drawSlots here, animate will handle it on next frame
+            });
+        };
+
+        // Call initGame when the window is fully loaded
+        window.onload = initGame;
+    </script>
+</body>
+</html>

@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tile Explorer - The Game!</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Minimal, clean, standalone styles for Tile Explorer */
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(to right bottom, #8A2BE2, #4B0082); /* Purple/Indigo gradient */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh; /* Ensure it fills the screen vertically */
+            margin: 0;
+            color: #fff;
+            overflow: hidden; /* No scrollbars on body */
+            -webkit-user-select: none; /* Disable text selection */
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        .game-container {
+            background-color: rgba(255, 255, 255, 0.1); /* Slightly transparent white overlay */
+            backdrop-filter: blur(10px); /* Frosted glass effect */
+            border-radius: 20px;
+            padding: 1rem 1.5rem; /* Reduced vertical padding even more */
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            max-width: 500px; /* Still max width for the container */
+            width: 90%;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            min-height: auto;
+            height: auto;
+            gap: 0.75rem;
+            /* Allow scrolling within the container if content is too tall */
+            overflow-y: auto; /* Allow vertical scrolling if necessary */
+            -ms-overflow-style: none; /* Hide scrollbar for IE/Edge */
+            scrollbar-width: none; /* Hide scrollbar for Firefox */
+        }
+        .game-container::-webkit-scrollbar {
+            display: none; /* Hide scrollbar for Chrome, Safari, Opera */
+        }
+
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            color: #E2B2FF;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+        }
+
+        .text-gray-300 {
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .difficulty-buttons {
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+        }
+
+        .difficulty-buttons button {
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            transition: transform 0.1s ease-out, background-color 0.2s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            font-size: 0.8rem;
+        }
+
+        .difficulty-buttons button:active {
+            transform: scale(0.95);
+        }
+
+        .difficulty-buttons .easy { background-color: #28a745; }
+        .difficulty-buttons .medium { background-color: #ffc107; color: #333; }
+        .difficulty-buttons .hard { background-color: #dc3545; }
+        .difficulty-buttons button.selected {
+            border: 3px solid #E2B2FF;
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+        }
+
+        .stats-grid {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 0.75rem;
+            font-size: 0.9rem;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            margin: 0.2rem 0.6rem;
+        }
+
+        .stat-item i {
+            margin-right: 0.3rem;
+            color: #E2B2FF;
+        }
+
+        .mine-grid-container {
+            background-color: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            padding: 0.6rem;
+            margin: 0.6rem auto;
+            display: inline-block;
+            /* Ensure it doesn't try to grow too big horizontally */
+            max-width: calc(100% - 1.2rem); /* Account for its own padding */
+            box-sizing: border-box; /* Include padding in width calculation */
+            overflow: hidden; /* Hide anything that spills out */
+        }
+
+        .mine-grid {
+            display: grid;
+            gap: 3px;
+        }
+
+        /* Responsive Tile Sizing - THIS IS THE KEY FIX, BRO! */
+        .mine-tile {
+            /* Set a base size for all, then override for specific difficulties */
+            min-width: 25px; /* Minimum width to ensure it's always visible */
+            min-height: 25px; /* Minimum height to ensure it's always visible */
+            background-color: #6C2B92;
+            border: 2px solid #A052E2;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            box-sizing: border-box; /* Include border in width/height calculation */
+        }
+
+        /* Specific sizes for different difficulties - REVISITED */
+        .mine-grid-easy .mine-tile {
+            width: 60px;
+            height: 60px;
+            font-size: 1.8rem;
+        }
+
+        .mine-grid-medium .mine-tile {
+            width: 45px;
+            height: 45px;
+            font-size: 1.4rem;
+        }
+
+        .mine-grid-hard .mine-tile {
+            /* Calculate width dynamically using `calc()` for better responsiveness */
+            /* Total width = 100% of parent - (gap * (number of columns - 1)) / number of columns */
+            width: calc((100% - (3px * 8)) / 9); /* 9 columns, 8 gaps of 3px each */
+            height: calc((100% - (3px * 8)) / 9); /* Maintain aspect ratio */
+            font-size: 0.9rem; /* Smaller icon too */
+            border-width: 1px; /* Thinner border for tiny tiles */
+            border-radius: 3px; /* Smaller radius */
+        }
+
+        /* Ensure icon size adapts to actual tile size for hard mode */
+        .mine-grid-hard .key-found,
+        .mine-grid-hard .mine-found {
+            font-size: 0.8em; /* Relative to tile font size */
+        }
+
+
+        .mine-tile:hover:not(.mined) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .mine-tile:active:not(.mined) {
+            transform: scale(0.95);
+            background-color: #4C1D70;
+        }
+
+        .mined {
+            background-color: #333;
+            cursor: default;
+            box-shadow: none;
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        .key-found {
+            color: #FFD700;
+            font-size: 1.6rem;
+            animation: bounceIn 0.5s ease-out;
+        }
+
+        .mine-found {
+            color: #E24F4F;
+            font-size: 1.6rem;
+            animation: shake 0.5s ease-out;
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-5px); }
+            40%, 80% { transform: translateX(5px); }
+        }
+
+        .bottom-buttons {
+            margin-top: 1.2rem;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+        }
+        .bottom-buttons button {
+            padding: 0.5rem 1rem;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: transform 0.1s ease-out, background-color 0.2s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            font-size: 0.85rem;
+        }
+        .bottom-buttons button:active {
+            transform: scale(0.95);
+        }
+
+        .reset-button { background-color: #6A1B9A; border: 1px solid #9C27B0; }
+        .reset-button:hover { background-color: #7B1FA2; }
+        .back-button { background-color: #555; border: 1px solid #777; }
+        .back-button:hover { background-color: #666; }
+
+        .footer-text {
+            margin-top: 1rem;
+            font-size: 0.65rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        /* Notification Modal (minimal version) */
+        .notification-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .notification-content {
+            background-color: #2a005a;
+            padding: 1.2rem;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            width: 90%;
+            max-width: 300px;
+            border: 2px solid #8A2BE2;
+        }
+        .notification-content h2 {
+            font-size: 1.4rem;
+            font-weight: bold;
+            margin-bottom: 0.7rem;
+            color: #E2B2FF;
+        }
+        .notification-content p {
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            color: #ccc;
+        }
+        .notification-content button {
+            background-color: #8A2BE2;
+            padding: 0.5rem 1.2rem;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: background-color 0.2s ease;
+        }
+        .notification-content button:hover {
+            background-color: #9932CC;
+        }
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>Tile Explorer!</h1>
+        <p class="text-gray-300">Find all the keys without hitting a mine, dude!</p>
+
+        <div class="difficulty-buttons">
+            <button id="easy-btn" class="easy selected" data-difficulty="easy">Easy (3x3)</button>
+            <button id="medium-btn" class="medium" data-difficulty="medium">Medium (5x5)</button>
+            <button id="hard-btn" class="hard" data-difficulty="hard">Hard (9x9)</button>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-item">
+                <i class="fas fa-key"></i>
+                Keys Found: <span id="keys-found-display">0</span>/<span id="total-keys-display">0</span>
+            </div>
+            <div class="stat-item">
+                <i class="fas fa-bomb"></i>
+                Mines Left: <span id="mines-left-display">0</span>
+            </div>
+            <div class="stat-item">
+                <i class="fas fa-wallet"></i>
+                Keys in Wallet: <span id="wallet-keys-display">0</span>
+            </div>
+        </div>
+
+        <div class="mine-grid-container">
+            <div id="mine-grid" class="mine-grid">
+                </div>
+        </div>
+
+        <div class="bottom-buttons">
+            <button id="reset-game-btn" class="reset-button">Reset Game</button>
+            <button id="back-to-home-btn" class="back-button" onclick="location.href='index.html'">Back to Home</button>
+        </div>
+
+        <p class="footer-text">© 2025 Your Awesome Self. All rights reserved, kinda.</p>
+    </div>
+
+    <div id="notification-modal" class="notification-modal hidden">
+        <div class="notification-content">
+            <h2 id="notification-title"></h2>
+            <p id="notification-message"></p>
+            <button id="close-notification-modal">Got it!</button>
+        </div>
+    </div>
+
+    <script type="module">
+        // --- Game State Variables (mostly local for this mini-game) ---
+        let currentDifficulty = 'easy';
+        let gridSize = 0; // Will be set based on difficulty (e.g., 9 for 3x3)
+        let totalKeys = 0;
+        let keysFound = 0;
+        let minesLeft = 0;
+        let gameGrid = []; // Array to store tile types: 'empty', 'key', 'mine'
+        let gameOver = false;
+
+        // --- Shared Game State (loaded/saved from index.html's localStorage) ---
+        let coins = 0;
+        let keys = 0; // This is the player's main wallet keys
+        let pphC = 0;
+        let pphK = 0;
+        let lastOnlineTime = Date.now();
+        let playerName = "New Player";
+        let tapsPerClick = 1;
+        let currentLevel = "Stone Coin";
+
+        // --- DOM Elements ---
+        const easyBtn = document.getElementById('easy-btn');
+        const mediumBtn = document.getElementById('medium-btn');
+        const hardBtn = document.getElementById('hard-btn');
+        const keysFoundDisplay = document.getElementById('keys-found-display');
+        const totalKeysDisplay = document.getElementById('total-keys-display');
+        const minesLeftDisplay = document.getElementById('mines-left-display');
+        const walletKeysDisplay = document.getElementById('wallet-keys-display');
+        const mineGridElement = document.getElementById('mine-grid');
+        const resetGameBtn = document.getElementById('reset-game-btn');
+        const notificationModal = document.getElementById('notification-modal');
+        const notificationTitle = document.getElementById('notification-title');
+        const notificationMessage = document.getElementById('notification-message');
+        const closeNotificationModalButton = document.getElementById('close-notification-modal');
+
+        // Difficulty Configurations - Adjusted tile sizes here
+        const difficulties = {
+            'easy': { size: 3, numKeys: 2, numMines: 1, mineCost: 50 }, // 3x3 = 9 tiles
+            'medium': { size: 5, numKeys: 4, numMines: 3, mineCost: 150 }, // 5x5 = 25 tiles
+            'hard': { size: 9, numKeys: 8, numMines: 7, mineCost: 300 } // 9x9 = 81 tiles
+        };
+
+        // --- Local Storage Data Management (simplified for this game) ---
+        const saveMainGameState = () => {
+            const gameState = {
+                playerName: playerName,
+                coins: coins,
+                tapsPerClick: tapsPerClick,
+                pphC: pphC,
+                pphK: pphK,
+                keys: keys, // IMPORTANT: Save updated keys!
+                lastOnlineTime: Date.now(),
+                currentLevel: currentLevel
+            };
+            try {
+                localStorage.setItem('coinTapMasterState', JSON.stringify(gameState));
+                console.log("Main game state saved from Tile Explorer:", gameState);
+            } catch (e) {
+                console.error("Error saving main game state:", e);
+            }
+        };
+
+        const loadMainGameState = () => {
+            try {
+                const savedState = localStorage.getItem('coinTapMasterState');
+                if (savedState) {
+                    const gameState = JSON.parse(savedState);
+                    coins = gameState.coins || 0;
+                    keys = gameState.keys || 0;
+                    pphC = gameState.pphC || 0;
+                    pphK = gameState.pphK || 0;
+                    lastOnlineTime = gameState.lastOnlineTime || Date.now();
+                    playerName = gameState.playerName || "New Player";
+                    tapsPerClick = gameState.tapsPerClick || 1;
+                    currentLevel = gameState.currentLevel || "Stone Coin";
+                    console.log("Main game state loaded into Tile Explorer:", gameState);
+                } else {
+                    console.log("No saved main game state found.");
+                }
+            } catch (e) {
+                console.error("Error loading main game state:", e);
+                console.log("Corrupted main game state. Starting with defaults.");
+            }
+        };
+
+        // --- UI Update Functions ---
+        const updateUI = () => {
+            keysFoundDisplay.textContent = keysFound;
+            totalKeysDisplay.textContent = totalKeys;
+            minesLeftDisplay.textContent = difficulties[currentDifficulty].numMines - (gameGrid.filter(t => t.type === 'mine' && t.revealed).length);
+            walletKeysDisplay.textContent = keys; // Update wallet keys
+        };
+
+        const showNotification = (title, message) => {
+            notificationTitle.textContent = title;
+            notificationMessage.innerHTML = message;
+            notificationModal.classList.remove('hidden');
+        };
+
+        // --- Game Logic ---
+
+        const initializeGame = () => {
+            loadMainGameState(); // Load main game state (coins, keys)
+            selectDifficulty(currentDifficulty); // Set up initial grid based on default difficulty
+            updateUI(); // Initial UI update
+        };
+
+        const selectDifficulty = (difficulty) => {
+            if (gameOver) {
+                // If game was over, reset completely before changing difficulty
+                if (!confirm("Are you sure you want to reset and change difficulty, dude?")) {
+                    return;
+                }
+            }
+            currentDifficulty = difficulty;
+            const config = difficulties[currentDifficulty];
+            gridSize = config.size * config.size;
+            totalKeys = config.numKeys;
+            keysFound = 0;
+            minesLeft = config.numMines;
+            gameOver = false;
+
+            // Update selected button style
+            document.querySelectorAll('.difficulty-buttons button').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            document.getElementById(`${difficulty}-btn`).classList.add('selected');
+
+            generateGrid();
+            renderGrid(); // Call renderGrid after difficulty is set and grid is generated
+            updateUI();
+        };
+
+        const generateGrid = () => {
+            gameGrid = Array(gridSize).fill('empty'); // Start with all empty tiles
+            const config = difficulties[currentDifficulty];
+
+            // Place mines
+            let minesPlaced = 0;
+            while (minesPlaced < config.numMines) {
+                const index = Math.floor(Math.random() * gridSize);
+                if (gameGrid[index] === 'empty') {
+                    gameGrid[index] = 'mine';
+                    minesPlaced++;
+                }
+            }
+
+            // Place keys
+            let keysPlaced = 0;
+            while (keysPlaced < config.numKeys) {
+                const index = Math.floor(Math.random() * gridSize);
+                if (gameGrid[index] === 'empty') { // Only place key on empty spots
+                    gameGrid[index] = 'key';
+                    keysPlaced++;
+                }
+            }
+
+            // Convert to objects to track revealed state
+            gameGrid = gameGrid.map(type => ({ type: type, revealed: false }));
+
+            console.log("New game grid generated:", gameGrid.map(t => t.type));
+        };
+
+        const renderGrid = () => {
+            mineGridElement.innerHTML = '';
+            // Make sure to remove old classes before adding the new one
+            mineGridElement.classList.remove('mine-grid-easy', 'mine-grid-medium', 'mine-grid-hard');
+            mineGridElement.classList.add(`mine-grid-${currentDifficulty}`);
+            mineGridElement.style.gridTemplateColumns = `repeat(${difficulties[currentDifficulty].size}, 1fr)`; // Set columns dynamically
+
+
+            gameGrid.forEach((tile, index) => {
+                const tileDiv = document.createElement('div');
+                tileDiv.classList.add('mine-tile');
+                tileDiv.dataset.index = index;
+
+                if (tile.revealed) {
+                    tileDiv.classList.add('mined');
+                    if (tile.type === 'key') {
+                        tileDiv.innerHTML = '<span class="key-found">🔑</span>';
+                    } else if (tile.type === 'mine') {
+                        tileDiv.innerHTML = '<span class="mine-found">💣</span>';
+                    }
+                } else {
+                    tileDiv.addEventListener('click', handleTileClick);
+                }
+                mineGridElement.appendChild(tileDiv);
+            });
+        };
+
+        const handleTileClick = (event) => {
+            if (gameOver) return;
+
+            const tileIndex = parseInt(event.currentTarget.dataset.index);
+            const tile = gameGrid[tileIndex];
+
+            if (tile.revealed) return; // Already clicked
+
+            tile.revealed = true;
+            renderGrid(); // Update the tile visually
+
+            if (tile.type === 'key') {
+                keysFound++;
+                showNotification("Success!", `You found a key, dude! ${keysFound}/${totalKeys} found.`);
+                updateUI();
+                if (keysFound === totalKeys) {
+                    gameOver = true;
+                    // Player wins! Reward the keys to the main wallet
+                    keys += totalKeys; // Add all found keys to wallet
+                    showNotification("You Win!", `BROOO! You found all ${totalKeys} keys! You've earned them!`, 'green');
+                    saveMainGameState(); // Save updated wallet keys
+                    updateUI(); // Update wallet keys display
+                }
+            } else if (tile.type === 'mine') {
+                minesLeft--;
+                gameOver = true;
+                showNotification("BOOM!", "You hit a mine! Game Over, dude! Better luck next time.", 'red');
+                // Reveal all mines on game over
+                gameGrid.forEach(t => {
+                    if (t.type === 'mine' && !t.revealed) t.revealed = true;
+                });
+                renderGrid(); // Render grid with revealed mines
+                updateUI();
+            } else { // 'empty' tile
+                showNotification("Just Dirt!", "Looks like an empty spot, bro. Keep digging!");
+            }
+        };
+
+        const resetGame = () => {
+            // Confirm with player if game is active and they want to reset
+            if (!gameOver && (keysFound > 0 || (difficulties[currentDifficulty].numMines - minesLeft) > 0)) {
+                if (!confirm("Are you sure you want to reset the current game, dude? You'll lose any keys found in this round!")) {
+                    return;
+                }
+            }
+            selectDifficulty(currentDifficulty); // Reset to current difficulty
+            showNotification("Game Reset!", "New grid, new chances, bro! Let's get it!");
+        };
+
+        // --- Event Listeners ---
+        easyBtn.addEventListener('click', () => selectDifficulty('easy'));
+        mediumBtn.addEventListener('click', () => selectDifficulty('medium'));
+        hardBtn.addEventListener('click', () => selectDifficulty('hard'));
+        resetGameBtn.addEventListener('click', resetGame);
+        closeNotificationModalButton.addEventListener('click', () => notificationModal.classList.add('hidden'));
+
+        // Initialize the game when the page loads
+        window.onload = initializeGame;
+    </script>
+</body>
+</html>

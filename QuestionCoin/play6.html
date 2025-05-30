@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coming Soon - play3.html</title>
+    <body style="background-color:#E6E6FA;"></body>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Basic styling for the body */
+        body {
+            font-family: sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(to right bottom, #8A2BE2, #4B0082); /* Just some chill background */
+            color: #fff;
+            position: relative; /* Needed for absolute positioning of the back button */
+        }
+
+        /* Styling for the H1 */
+        h1 {
+            font-size: 2.5rem;
+            color: #E2B2FF;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+            text-align: center;
+        }
+
+        /* NEW: Back button style - Copy this into your <style> block */
+        .back-to-games {
+            position: absolute; /* Position it relative to the body */
+            top: 20px; /* Distance from top */
+            left: 20px; /* Distance from left */
+            background-color: rgba(255, 255, 255, 0.15); /* Slightly visible background */
+            color: #E2B2FF; /* Light purple color */
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%; /* Make it a circle */
+            width: 45px; /* Size of the circle */
+            height: 45px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-size: 1.5rem; /* Larger icon for better visibility */
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            z-index: 10; /* Ensure it's above other elements */
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .back-to-games:hover {
+            background-color: rgba(255, 255, 255, 0.25);
+            transform: scale(1.05);
+        }
+
+        .back-to-games:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body>
+    <div class="back-to-games" onclick="location.href='games.html'">
+        <i class="fas fa-arrow-left"></i>
+    </div>
+
+    <h1>Coming Soon</h1>
+
+</body>
+</html>

@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market - Coin Tap Master</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #000;
+            color: #fff;
+            overflow-y: auto; /* Allow scrolling for content */
+            -webkit-user-select: none; /* Disable text selection */
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        .cubic-pattern {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                repeating-linear-gradient(0deg, #1a0033 0, #1a0033 1px, transparent 1px, transparent 20px),
+                repeating-linear-gradient(90deg, #1a0033 0, #1a0033 1px, transparent 1px, transparent 20px);
+            background-size: 20px 20px;
+            animation: glow-fade 10s infinite alternate;
+            z-index: -1;
+        }
+        @keyframes glow-fade {
+            0%, 10% { opacity: 0.2; }
+            50% { opacity: 0.8; }
+            90%, 100% { opacity: 0.2; }
+        }
+        .btn-tap-animation:active {
+            transform: scale(0.95);
+            transition: transform 0.1s ease-out;
+        }
+        /* Notification style */
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            z-index: 1001;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        .notification.show {
+            opacity: 1;
+        }
+        .notification.success {
+            border: 2px solid #34D399; /* Green */
+        }
+        .notification.error {
+            border: 2px solid #EF4444; /* Red */
+        }
+        .notification.info {
+            border: 2px solid #8B5CF6; /* Purple */
+        }
+    </style>
+</head>
+<body class="bg-black text-white flex flex-col h-screen">
+    <div class="cubic-pattern"></div>
+    <header class="flex justify-between items-center p-4 z-10 w-full">
+        <a href="index.html" class="flex items-center space-x-2 p-2 rounded-xl bg-gray-800 hover:bg-gray-700 transition-colors btn-tap-animation">
+            <i class="fas fa-arrow-left text-purple-400"></i>
+            <span class="text-sm font-semibold text-purple-400">Back</span>
+        </a>
+        <h1 class="text-2xl font-bold text-purple-400">Marketplace</h1>
+        <div class="flex flex-col space-y-2 items-end">
+            <div class="flex items-center space-x-1 p-2 rounded-xl bg-gray-800 text-sm">
+                <i class="fas fa-coins text-yellow-400"></i>
+                <span id="coins-display-header" class="font-semibold text-yellow-400">0</span>
+            </div>
+            <div class="flex items-center space-x-1 p-2 rounded-xl bg-gray-800 text-sm">
+                <span class="text-yellow-400 text-lg">🔑</span>
+                <span id="keys-display-header" class="font-semibold text-yellow-400">0</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow flex flex-col items-center p-4 z-10 overflow-y-auto">
+        <p class="text-gray-300 text-lg mb-8 text-center">Find amazing deals and boost your game!</p>
+
+        <section class="w-full max-w-4xl mb-10">
+            <h2 class="text-3xl font-bold text-yellow-400 mb-6 text-center">Key Packs</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="bg-gray-800 p-6 rounded-xl shadow-lg border border-yellow-600 text-center">
+                    <h3 class="text-xl font-bold text-white mb-2">Basic Key Pack</h3>
+                    <p class="text-gray-300 mb-4 flex items-center justify-center space-x-2">
+                        <span class="text-yellow-400 text-2xl">🔑</span> <span class="font-bold text-xl">300 Keys</span>
+                    </p>
+                    <p class="text-gray-300 mb-4">Cost: <span class="font-semibold text-green-400">85 Rupees</span></p>
+                    <button id="purchase-keypack-basic" class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg shadow-md transition-colors btn-tap-animation">Purchase</button>
+                </div>
+                <div class="bg-gray-800 p-6 rounded-xl shadow-lg border border-yellow-600 text-center">
+                    <h3 class="text-xl font-bold text-white mb-2">Standard Key Pack</h3>
+                    <p class="text-gray-300 mb-2 flex items-center justify-center space-x-2">
+                        <span class="text-yellow-400 text-2xl">🔑</span> <span class="font-bold text-xl">800 Keys</span>
+                    </p>
+                    <p class="text-gray-300 mb-4 flex items-center justify-center space-x-2">
+                        <i class="fas fa-coins text-yellow-400 text-xl"></i> <span class="font-bold text-xl">20,000 Coins</span>
+                    </p>
+                    <p class="text-gray-300 mb-4">Cost: <span class="font-semibold text-green-400">300 Rupees</span></p>
+                    <button id="purchase-keypack-standard" class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg shadow-md transition-colors btn-tap-animation">Purchase</button>
+                </div>
+                <div class="bg-gray-800 p-6 rounded-xl shadow-lg border border-yellow-600 text-center">
+                    <h3 class="text-xl font-bold text-white mb-2">Large Key Pack</h3>
+                    <p class="text-gray-300 mb-2 flex items-center justify-content-center space-x-2">
+                        <span class="text-yellow-400 text-2xl">🔑</span> <span class="font-bold text-xl">1,500 Keys</span>
+                    </p>
+                    <p class="text-gray-300 mb-4 flex items-center justify-content-center space-x-2">
+                        <i class="fas fa-coins text-yellow-400 text-xl"></i> <span class="font-bold text-xl">50,000 Coins</span>
+                    </p>
+                    <p class="text-gray-300 mb-4">Cost: <span class="font-semibold text-green-400">600 Rupees</span></p>
+                    <button id="purchase-keypack-large" class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg shadow-md transition-colors btn-tap-animation">Purchase</button>
+                </div>
+                <div class="bg-gray-800 p-6 rounded-xl shadow-lg border border-yellow-600 text-center">
+                    <h3 class="text-xl font-bold text-white mb-2">Mega Key Pack</h3>
+                    <p class="text-gray-300 mb-2 flex items-center justify-content-center space-x-2">
+                        <span class="text-yellow-400 text-2xl">🔑</span> <span class="font-bold text-xl">3,200 Keys</span>
+                    </p>
+                    <p class="text-gray-300 mb-4 flex items-center justify-content-center space-x-2">
+                        <i class="fas fa-coins text-yellow-400 text-xl"></i> <span class="font-bold text-xl">100,000 Coins</span>
+                    </p>
+                    <p class="text-gray-300 mb-4">Cost: <span class="font-semibold text-green-400">1,100 Rupees</span></p>
+                    <button id="purchase-keypack-mega" class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg shadow-md transition-colors btn-tap-animation">Purchase</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="w-full max-w-4xl mb-10">
+            <h2 class="text-3xl font-bold text-purple-400 mb-6 text-center">Membership Options</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div class="bg-gray-800 p-6 rounded-xl shadow-lg border border-purple-600 text-center">
+                    <h3 class="text-xl font-bold text-white mb-2">Weekly Membership</h3>
+                    <p class="text-gray-300 mb-2 flex items-center justify-center space-x-2">
+                        <span class="text-yellow-400 text-2xl">🔑</span> <span class="font-bold text-xl">400 Keys Instantly!</span>
+                    </p>
+                    <p class="text-gray-300 mb-4 flex items-center justify-center space-x-2">
+                        <span class="text-yellow-400 text-2xl">🔑</span> <span class="font-bold text-xl">50 Keys / Day for 7 Days</span>
+                    </p>
+                    <p class="text-gray-300 mb-4">Cost: <span class="font-semibold text-green-400">300 Rupees</span></p> <button id="subscribe-weekly" class="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg shadow-md transition-colors btn-tap-animation">Subscribe</button>
+                </div>
+                <div class="bg-gray-800 p-6 rounded-xl shadow-lg border border-purple-600 text-center">
+                    <h3 class="text-xl font-bold text-white mb-2">Monthly Membership</h3>
+                    <p class="text-gray-300 mb-2 flex items-center justify-center space-x-2">
+                        <span class="text-yellow-400 text-2xl">🔑</span> <span class="font-bold text-xl">1,000 Keys Instantly!</span>
+                    </p>
+                    <p class="text-gray-300 mb-4 flex items-center justify-center space-x-2">
+                        <span class="text-yellow-400 text-2xl">🔑</span> <span class="font-bold text-xl">100 Keys / Day for 30 Days</span>
+                    </p>
+                    <p class="text-gray-300 mb-4">Cost: <span class="font-semibold text-green-400">900 Rupees</span></p> <button id="subscribe-monthly" class="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg shadow-md transition-colors btn-tap-animation">Subscribe</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="your-memberships-section" class="w-full max-w-4xl mb-10 hidden">
+            <h2 class="text-3xl font-bold text-purple-400 mb-6 text-center">Your Active Memberships</h2>
+            <div id="active-memberships-container" class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                </div>
+        </section>
+
+    </main>
+
+    <div id="notification-container" class="notification hidden"></div>
+
+    <nav class="flex justify-around items-center w-full bg-gray-900 p-2 fixed bottom-0 left-0 rounded-t-2xl shadow-inner shadow-purple-900 z-10">
+        <a href="card.html" class="flex flex-col items-center p-2 text-purple-400 hover:text-purple-300 transition-colors btn-tap-animation w-1/4">
+            <i class="fas fa-credit-card text-2xl mb-1"></i>
+            <span class="text-xs">Cards</span>
+        </a>
+        <a href="games.html" class="flex flex-col items-center p-2 text-purple-400 hover:text-purple-300 transition-colors btn-tap-animation w-1/4">
+            <i class="fas fa-gamepad text-2xl mb-1"></i>
+            <span class="text-xs">Games</span>
+        </a>
+        <a href="market.html" class="flex flex-col items-center p-2 text-purple-400 hover:text-purple-300 transition-colors btn-tap-animation w-1/4">
+            <i class="fas fa-store text-2xl mb-1"></i>
+            <span class="text-xs">Market</span>
+        </a>
+        <a href="airdrop.html" class="flex flex-col items-center p-2 text-purple-400 hover:text-purple-300 transition-colors btn-tap-animation w-1/4">
+            <i class="fas fa-plane-departure text-2xl mb-1"></i>
+            <span class="text-xs">Airdrop</span>
+        </a>
+    </nav>
+
+    <script type="module">
+        // Game State Variables (loaded from localStorage)
+        let coins = 0;
+        let keys = 0;
+        let activeMemberships = {}; // Stores { membershipId: { startDate: timestamp, endDate: timestamp, lastClaimDate: timestamp } }
+
+        // DOM Elements
+        const coinsDisplayHeader = document.getElementById('coins-display-header');
+        const keysDisplayHeader = document.getElementById('keys-display-header');
+        const notificationContainer = document.getElementById('notification-container');
+        const yourMembershipsSection = document.getElementById('your-memberships-section');
+        const activeMembershipsContainer = document.getElementById('active-memberships-container');
+
+        // Membership Definitions
+        const membershipDefinitions = {
+            'weekly': {
+                name: 'Weekly Membership',
+                instantKeys: 400,
+                dailyKeys: 50,
+                durationDays: 7,
+                costRupees: 300 // Reduced price
+            },
+            'monthly': {
+                name: 'Monthly Membership',
+                instantKeys: 1000,
+                dailyKeys: 100,
+                durationDays: 30,
+                costRupees: 900 // Reduced price
+            }
+        };
+
+        // Key Pack Definitions (for reference, not dynamic rendering in this update)
+        const keyPackDefinitions = {
+            'basic': { keys: 300, costRupees: 85, costCoins: 0 },
+            'standard': { keys: 800, costRupees: 300, costCoins: 20000 },
+            'large': { keys: 1500, costRupees: 600, costCoins: 50000 },
+            'mega': { keys: 3200, costRupees: 1100, costCoins: 100000 }
+        };
+
+        // --- Utility Functions ---
+        const formatNumber = (num) => {
+            if (num >= 1000000000) return (num / 1000000000).toFixed(1) + 'B';
+            if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+            return num.toLocaleString();
+        };
+
+        const showNotification = (message, type = 'info') => {
+            notificationContainer.textContent = message;
+            notificationContainer.className = `notification show ${type}`;
+            setTimeout(() => {
+                notificationContainer.classList.remove('show');
+            }, 3000); // Hide after 3 seconds
+        };
+
+        // --- Game State Management (Local Storage) ---
+        const loadGameState = () => {
+            try {
+                const savedState = localStorage.getItem('coinTapMasterState');
+                if (savedState) {
+                    const gameState = JSON.parse(savedState);
+                    coins = gameState.coins || 0;
+                    keys = gameState.keys || 0;
+                    activeMemberships = gameState.activeMemberships || {}; // Load active memberships
+                    console.log("Game state loaded in Market page:", gameState);
+                } else {
+                    console.log("No saved game state found in Market page. Initializing defaults.");
+                }
+            } catch (e) {
+                console.error("Error loading game state in Market page:", e);
+                showNotification("Error loading game data!", "error");
+            }
+            updateUI();
+            renderMemberships(); // Render memberships after loading state
+        };
+
+        const saveGameState = () => {
+            // Retrieve the full existing state to preserve other properties
+            let existingState = {};
+            try {
+                const savedState = localStorage.getItem('coinTapMasterState');
+                if (savedState) {
+                    existingState = JSON.parse(savedState);
+                }
+            } catch (e) {
+                console.error("Error parsing existing game state from Local Storage:", e);
+            }
+
+            const gameState = {
+                ...existingState, // Spread existing properties
+                coins: coins,
+                keys: keys,
+                activeMemberships: activeMemberships, // Save active memberships
+                lastOnlineTime: Date.now() // Always update last online time on save
+            };
+            try {
+                localStorage.setItem('coinTapMasterState', JSON.stringify(gameState));
+                console.log("Game state saved from Market page:", gameState);
+            } catch (e) {
+                console.error("Error saving game state from Market page:", e);
+                showNotification("Error saving game data!", "error");
+            }
+            updateUI(); // Update UI after saving
+        };
+
+        const updateUI = () => {
+            coinsDisplayHeader.textContent = formatNumber(coins);
+            keysDisplayHeader.textContent = formatNumber(keys);
+        };
+
+        // --- Market Logic ---
+
+        // Purchase Key Packs (example implementation, you'd expand this)
+        document.getElementById('purchase-keypack-basic').addEventListener('click', () => {
+            const pack = keyPackDefinitions.basic;
+            // Assuming "Rupees" are a separate currency not managed here, or this is just a placeholder for real money.
+            // For now, we'll just add keys and coins if coins are required.
+            if (coins >= pack.costCoins) {
+                coins -= pack.costCoins;
+                keys += pack.keys;
+                showNotification(`Purchased Basic Key Pack! Gained ${formatNumber(pack.keys)} keys.`, 'success');
+                saveGameState();
+            } else {
+                showNotification(`Not enough coins! You need ${formatNumber(pack.costCoins - coins)} more.`, 'error');
+            }
+        });
+        // Add similar event listeners for other key packs (Standard, Large, Mega)
+        document.getElementById('purchase-keypack-standard').addEventListener('click', () => {
+            const pack = keyPackDefinitions.standard;
+            if (coins >= pack.costCoins) {
+                coins -= pack.costCoins;
+                keys += pack.keys;
+                showNotification(`Purchased Standard Key Pack! Gained ${formatNumber(pack.keys)} keys.`, 'success');
+                saveGameState();
+            } else {
+                showNotification(`Not enough coins! You need ${formatNumber(pack.costCoins - coins)} more.`, 'error');
+            }
+        });
+        document.getElementById('purchase-keypack-large').addEventListener('click', () => {
+            const pack = keyPackDefinitions.large;
+            if (coins >= pack.costCoins) {
+                coins -= pack.costCoins;
+                keys += pack.keys;
+                showNotification(`Purchased Large Key Pack! Gained ${formatNumber(pack.keys)} keys.`, 'success');
+                saveGameState();
+            } else {
+                showNotification(`Not enough coins! You need ${formatNumber(pack.costCoins - coins)} more.`, 'error');
+            }
+        });
+        document.getElementById('purchase-keypack-mega').addEventListener('click', () => {
+            const pack = keyPackDefinitions.mega;
+            if (coins >= pack.costCoins) {
+                coins -= pack.costCoins;
+                keys += pack.keys;
+                showNotification(`Purchased Mega Key Pack! Gained ${formatNumber(pack.keys)} keys.`, 'success');
+                saveGameState();
+            } else {
+                showNotification(`Not enough coins! You need ${formatNumber(pack.costCoins - coins)} more.`, 'error');
+            }
+        });
+
+
+        // Subscribe to Memberships
+        document.getElementById('subscribe-weekly').addEventListener('click', () => {
+            const membershipId = 'weekly';
+            const def = membershipDefinitions[membershipId];
+            // Assuming "Rupees" are a separate currency not managed here, or this is just a placeholder for real money.
+            // For now, we'll just check if they already have it.
+            if (activeMemberships[membershipId] && new Date(activeMemberships[membershipId].endDate).getTime() > Date.now()) {
+                showNotification(`You already have an active ${def.name}!`, 'info');
+                return;
+            }
+
+            // Simulate purchase (no actual rupees deduction in this HTML demo)
+            keys += def.instantKeys; // Grant instant keys
+
+            const startDate = Date.now();
+            const endDate = startDate + (def.durationDays * 24 * 60 * 60 * 1000); // Days to milliseconds
+            const lastClaimDate = new Date().setHours(0,0,0,0); // Set to start of today for initial claim availability
+
+            activeMemberships[membershipId] = {
+                startDate: startDate,
+                endDate: endDate,
+                lastClaimDate: lastClaimDate,
+                dailyKeys: def.dailyKeys, // Store daily keys for convenience
+                durationDays: def.durationDays // Store duration for display
+            };
+
+            showNotification(`Subscribed to ${def.name}! Gained ${formatNumber(def.instantKeys)} keys instantly.`, 'success');
+            saveGameState();
+            renderMemberships();
+        });
+
+        document.getElementById('subscribe-monthly').addEventListener('click', () => {
+            const membershipId = 'monthly';
+            const def = membershipDefinitions[membershipId];
+            if (activeMemberships[membershipId] && new Date(activeMemberships[membershipId].endDate).getTime() > Date.now()) {
+                showNotification(`You already have an active ${def.name}!`, 'info');
+                return;
+            }
+
+            // Simulate purchase
+            keys += def.instantKeys;
+
+            const startDate = Date.now();
+            const endDate = startDate + (def.durationDays * 24 * 60 * 60 * 1000);
+            const lastClaimDate = new Date().setHours(0,0,0,0);
+
+            activeMemberships[membershipId] = {
+                startDate: startDate,
+                endDate: endDate,
+                lastClaimDate: lastClaimDate,
+                dailyKeys: def.dailyKeys,
+                durationDays: def.durationDays
+            };
+
+            showNotification(`Subscribed to ${def.name}! Gained ${formatNumber(def.instantKeys)} keys instantly.`, 'success');
+            saveGameState();
+            renderMemberships();
+        });
+
+        // --- Membership Display and Claim Logic ---
+        const renderMemberships = () => {
+            activeMembershipsContainer.innerHTML = ''; // Clear previous display
+            let hasActiveMemberships = false;
+            const today = new Date().setHours(0,0,0,0); // Start of today
+
+            for (const id in activeMemberships) {
+                const membership = activeMemberships[id];
+                const def = membershipDefinitions[id];
+
+                if (!def) continue; // Skip if definition is missing
+
+                const endDate = new Date(membership.endDate);
+                const daysLeft = Math.ceil((endDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+
+                if (daysLeft <= 0) {
+                    delete activeMemberships[id]; // Remove expired membership
+                    continue;
+                }
+
+                hasActiveMemberships = true;
+
+                const canClaimToday = new Date(membership.lastClaimDate).getTime() < today;
+                const nextClaimDate = new Date(today);
+                if (!canClaimToday) {
+                    nextClaimDate.setDate(nextClaimDate.getDate() + 1); // If already claimed today, next claim is tomorrow
+                }
+
+
+                const cardElement = document.createElement('div');
+                cardElement.className = 'bg-gray-800 p-6 rounded-xl shadow-lg border border-purple-600 text-center';
+                cardElement.innerHTML = `
+                    <h3 class="text-xl font-bold text-white mb-2">${def.name}</h3>
+                    <p class="text-gray-300 mb-2">Days Left: <span class="font-bold text-purple-400">${daysLeft}</span></p>
+                    <p class="text-gray-300 mb-4">Daily Keys: <span class="font-bold text-yellow-400">${formatNumber(def.dailyKeys)}</span></p>
+                    <p class="text-gray-300 text-sm mb-4">
+                        ${canClaimToday ? 'Ready to Claim!' : `Next Claim: ${new Date(membership.lastClaimDate).toDateString() === new Date().toDateString() ? 'Tomorrow' : new Date(nextClaimDate).toLocaleDateString()}`}
+                    </p>
+                    <button id="claim-${id}" class="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg shadow-md transition-colors btn-tap-animation ${!canClaimToday ? 'opacity-50 cursor-not-allowed' : ''}" ${!canClaimToday ? 'disabled' : ''}>
+                        Claim Daily Keys
+                    </button>
+                `;
+                activeMembershipsContainer.appendChild(cardElement);
+
+                if (canClaimToday) {
+                    document.getElementById(`claim-${id}`).addEventListener('click', () => handleClaimDailyKeys(id));
+                }
+            }
+
+            if (hasActiveMemberships) {
+                yourMembershipsSection.classList.remove('hidden');
+            } else {
+                yourMembershipsSection.classList.add('hidden');
+            }
+            saveGameState(); // Save state after rendering memberships (in case any expired)
+        };
+
+        const handleClaimDailyKeys = (membershipId) => {
+            const membership = activeMemberships[membershipId];
+            const def = membershipDefinitions[membershipId];
+            const today = new Date().setHours(0,0,0,0);
+
+            if (!membership || new Date(membership.endDate).getTime() <= Date.now()) {
+                showNotification("This membership has expired!", "error");
+                return;
+            }
+
+            if (new Date(membership.lastClaimDate).getTime() >= today) {
+                showNotification("You've already claimed for today!", "info");
+                return;
+            }
+
+            keys += def.dailyKeys;
+            membership.lastClaimDate = today; // Mark as claimed for today
+
+            showNotification(`Claimed ${formatNumber(def.dailyKeys)} keys from ${def.name}!`, 'success');
+            saveGameState();
+            renderMemberships(); // Re-render to update claim status
+        };
+
+        // Initialize on page load
+        window.onload = loadGameState;
+    </script>
+</body>
+</html>

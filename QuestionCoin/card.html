@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cards - Coin Tap Master</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #000;
+            color: #fff;
+            overflow-y: auto; /* Allow scrolling for content */
+            -webkit-user-select: none; /* Disable text selection */
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        .cubic-pattern {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                repeating-linear-gradient(0deg, #1a0033 0, #1a0033 1px, transparent 1px, transparent 20px),
+                repeating-linear-gradient(90deg, #1a0033 0, #1a0033 1px, transparent 1px, transparent 20px);
+            background-size: 20px 20px;
+            animation: glow-fade 10s infinite alternate;
+            z-index: -1;
+        }
+        @keyframes glow-fade {
+            0%, 10% { opacity: 0.2; }
+            50% { opacity: 0.8; }
+            90%, 100% { opacity: 0.2; }
+        }
+        .btn-tap-animation:active {
+            transform: scale(0.95);
+            transition: transform 0.1s ease-out;
+        }
+        /* Custom glow for golden cards */
+        .golden-glow {
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.7); /* Golden glow */
+        }
+        /* Custom glow for purple cards */
+        .purple-glow {
+            box-shadow: 0 0 15px rgba(138, 43, 226, 0.7); /* Purple glow */
+        }
+        /* Notification style */
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            z-index: 1001;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        .notification.show {
+            opacity: 1;
+        }
+        .notification.success {
+            border: 2px solid #34D399; /* Green */
+        }
+        .notification.error {
+            border: 2px solid #EF4444; /* Red */
+        }
+        .notification.info {
+            border: 2px solid #8B5CF6; /* Purple */
+        }
+    </style>
+</head>
+<body class="bg-black text-white flex flex-col h-screen">
+    <div class="cubic-pattern"></div>
+    <header class="relative w-full p-4 z-10">
+        <a href="index.html" class="absolute top-4 left-4 flex items-center space-x-2 p-2 rounded-xl bg-gray-800 hover:bg-gray-700 transition-colors btn-tap-animation">
+            <i class="fas fa-arrow-left text-purple-400"></i>
+            <span class="text-sm font-semibold text-purple-400">Back</span>
+        </a>
+        <h1 class="text-2xl font-bold text-purple-400 mx-auto">Cards</h1>
+        <div class="absolute top-4 right-4 flex flex-col space-y-2 items-end">
+            <div class="flex items-center space-x-1 p-2 rounded-xl bg-gray-800 text-sm">
+                <i class="fas fa-coins text-yellow-400"></i>
+                <span id="coins-display-header" class="font-semibold text-yellow-400">0</span>
+            </div>
+            <div class="flex items-center space-x-1 p-2 rounded-xl bg-gray-800 text-sm">
+                <i class="fas fa-hourglass-half text-purple-400"></i>
+                <span id="pph-coins-display-header" class="font-semibold text-purple-400">0 PPH (C)</span>
+            </div>
+            <div class="flex items-center space-x-1 p-2 rounded-xl bg-gray-800 text-sm">
+                <span class="text-yellow-400 text-lg">🔑</span>
+                <span id="pph-keys-display-header" class="font-semibold text-yellow-400">0 PPH (K)</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow flex flex-col items-center p-4 z-10 overflow-y-auto">
+        <p class="text-gray-300 text-lg mb-8 text-center">Collect and upgrade powerful cards to boost your game!</p>
+
+        <div id="cards-container" class="w-full max-w-4xl">
+            </div>
+    </main>
+
+    <div id="notification-container" class="notification hidden"></div>
+
+    <nav class="flex justify-around items-center w-full bg-gray-900 p-2 fixed bottom-0 left-0 rounded-t-2xl shadow-inner shadow-purple-900 z-10">
+        <a href="card.html" class="flex flex-col items-center p-2 text-purple-400 hover:text-purple-300 transition-colors btn-tap-animation w-1/4">
+            <i class="fas fa-credit-card text-2xl mb-1"></i>
+            <span class="text-xs">Cards</span>
+        </a>
+        <a href="games.html" class="flex flex-col items-center p-2 text-purple-400 hover:text-purple-300 transition-colors btn-tap-animation w-1/4">
+            <i class="fas fa-gamepad text-2xl mb-1"></i>
+            <span class="text-xs">Games</span>
+        </a>
+        <a href="market.html" class="flex flex-col items-center p-2 text-purple-400 hover:text-purple-300 transition-colors btn-tap-animation w-1/4">
+            <i class="fas fa-store text-2xl mb-1"></i>
+            <span class="text-xs">Market</span>
+        </a>
+        <a href="airdrop.html" class="flex flex-col items-center p-2 text-purple-400 hover:text-purple-300 transition-colors btn-tap-animation w-1/4">
+            <i class="fas fa-plane-departure text-2xl mb-1"></i>
+            <span class="text-xs">Airdrop</span>
+        </a>
+    </nav>
+
+    <script type="module">
+        // Game State Variables (loaded from localStorage)
+        let coins = 0;
+        let pphC = 0;
+        let pphK = 0;
+        let ownedCards = {}; // Stores { cardId: { level: X } }
+
+        // DOM Elements for header
+        const coinsDisplayHeader = document.getElementById('coins-display-header');
+        const pphCoinsDisplayHeader = document.getElementById('pph-coins-display-header');
+        const pphKeysDisplayHeader = document.getElementById('pph-keys-display-header');
+        const cardsContainer = document.getElementById('cards-container');
+        const notificationContainer = document.getElementById('notification-container');
+
+        // Card Definitions - REDUCED PPH and Costs
+        const cardDefinitions = [
+            {
+                id: 'default_base1',
+                name: 'Base 1 (Default)',
+                type: 'default',
+                description: 'A basic card to get you started.',
+                basePphC: 10, // Reduced from 50
+                pphC_per_level: 10, // Reduced from 50
+                basePphK: 0,
+                pphK_per_level: 0,
+                baseCost: 100, // Reduced from 500
+                cost_multiplier_per_level: 1.5, // Adjusted multiplier
+                maxLevel: 25,
+                bgColor: 'bg-gray-800',
+                borderColor: 'border-purple-600',
+                buttonBg: 'bg-green-600',
+                buttonHover: 'hover:bg-green-700',
+                buttonText: 'text-white',
+                costText: 'text-yellow-400',
+                glowClass: ''
+            },
+            {
+                id: 'default_base2',
+                name: 'Base 2 (Default)',
+                type: 'default',
+                description: 'Another basic card for early game.',
+                basePphC: 15, // Reduced from 75
+                pphC_per_level: 15, // Reduced from 75
+                basePphK: 0,
+                pphK_per_level: 0,
+                baseCost: 250, // Reduced from 1500
+                cost_multiplier_per_level: 1.4, // Adjusted multiplier
+                maxLevel: 25,
+                bgColor: 'bg-gray-800',
+                borderColor: 'border-purple-600',
+                buttonBg: 'bg-green-600',
+                buttonHover: 'hover:bg-green-700',
+                buttonText: 'text-white',
+                costText: 'text-yellow-400',
+                glowClass: ''
+            },
+            {
+                id: 'red_base1',
+                name: 'Base 1 (Red)',
+                type: 'red',
+                description: 'Powerful cards with a fiery boost!',
+                basePphC: 40, // Reduced from 200
+                pphC_per_level: 20, // Reduced from 100
+                basePphK: 0,
+                pphK_per_level: 0,
+                baseCost: 1000, // Reduced from 10000
+                cost_multiplier_per_level: 1.3, // Adjusted multiplier
+                maxLevel: 25,
+                bgColor: 'bg-red-800',
+                borderColor: 'border-red-600',
+                buttonBg: 'bg-red-600',
+                buttonHover: 'hover:bg-red-700',
+                buttonText: 'text-white',
+                costText: 'text-yellow-300',
+                glowClass: ''
+            },
+            {
+                id: 'red_base2',
+                name: 'Base 2 (Red)',
+                type: 'red',
+                description: 'Unleash the red power!',
+                basePphC: 60, // Reduced from 300
+                pphC_per_level: 30, // Reduced from 150
+                basePphK: 0,
+                pphK_per_level: 0,
+                baseCost: 2500, // Reduced from 25000
+                cost_multiplier_per_level: 1.25, // Adjusted multiplier
+                maxLevel: 25,
+                bgColor: 'bg-red-800',
+                borderColor: 'border-red-600',
+                buttonBg: 'bg-red-600',
+                buttonHover: 'hover:bg-red-700',
+                buttonText: 'text-white',
+                costText: 'text-yellow-300',
+                glowClass: ''
+            },
+            {
+                id: 'golden_base1',
+                name: 'Base 1 (Golden)',
+                type: 'golden',
+                description: 'Rare cards for true masters!',
+                basePphC: 200, // Reduced from 1000
+                pphC_per_level: 100, // Reduced from 500
+                basePphK: 0.1, // Reduced from 1
+                pphK_per_level: 0.1, // Reduced from 1
+                baseCost: 10000, // Reduced from 100000
+                cost_multiplier_per_level: 1.2, // Adjusted multiplier
+                maxLevel: 25,
+                bgColor: 'bg-yellow-700',
+                borderColor: 'border-yellow-500',
+                buttonBg: 'bg-yellow-500',
+                buttonHover: 'hover:bg-yellow-600',
+                buttonText: 'text-gray-900',
+                costText: 'text-gray-900',
+                glowClass: 'golden-glow'
+            },
+            {
+                id: 'golden_base2',
+                name: 'Base 2 (Golden)',
+                type: 'golden',
+                description: 'Shine bright with these golden boosts!',
+                basePphC: 300, // Reduced from 1500
+                pphC_per_level: 150, // Reduced from 750
+                basePphK: 0.2, // Reduced from 2
+                pphK_per_level: 0.2, // Reduced from 2
+                baseCost: 25000, // Reduced from 250000
+                cost_multiplier_per_level: 1.15, // Adjusted multiplier
+                maxLevel: 25,
+                bgColor: 'bg-yellow-700',
+                borderColor: 'border-yellow-500',
+                buttonBg: 'bg-yellow-500',
+                buttonHover: 'hover:bg-yellow-600',
+                buttonText: 'text-gray-900',
+                costText: 'text-gray-900',
+                glowClass: 'golden-glow'
+            },
+            {
+                id: 'special_base1',
+                name: 'Base 1 (Special)',
+                type: 'special',
+                description: 'Unleash unique abilities!',
+                basePphC: 1000, // Reduced from 5000
+                pphC_per_level: 500, // Reduced from 2500
+                basePphK: 0.5, // Reduced from 5
+                pphK_per_level: 0.5, // Reduced from 5
+                baseCost: 50000, // Reduced from 500000
+                cost_multiplier_per_level: 1.1, // Adjusted multiplier
+                maxLevel: 25,
+                bgColor: 'bg-purple-800',
+                borderColor: 'border-purple-600',
+                buttonBg: 'bg-purple-600',
+                buttonHover: 'hover:bg-purple-700',
+                buttonText: 'text-white',
+                costText: 'text-yellow-300',
+                glowClass: 'purple-glow'
+            },
+            {
+                id: 'special_base2',
+                name: 'Base 2 (Special)',
+                type: 'special',
+                description: 'Mysterious and powerful!',
+                basePphC: 1500, // Reduced from 7500
+                pphC_per_level: 750, // Reduced from 3750
+                basePphK: 0.8, // Reduced from 8
+                pphK_per_level: 0.8, // Reduced from 8
+                baseCost: 100000, // Reduced from 1000000
+                cost_multiplier_per_level: 1.08, // Adjusted multiplier
+                maxLevel: 25,
+                bgColor: 'bg-purple-800',
+                borderColor: 'border-purple-600',
+                buttonBg: 'bg-purple-600',
+                buttonHover: 'hover:bg-purple-700',
+                buttonText: 'text-white',
+                costText: 'text-yellow-300',
+                glowClass: 'purple-glow'
+            }
+        ];
+
+        // --- Utility Functions ---
+        const formatNumber = (num) => {
+            if (num >= 1000000000) return (num / 1000000000).toFixed(1) + 'B';
+            if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+            return num.toLocaleString();
+        };
+
+        const showNotification = (message, type = 'info') => {
+            notificationContainer.textContent = message;
+            notificationContainer.className = `notification show ${type}`;
+            setTimeout(() => {
+                notificationContainer.classList.remove('show');
+            }, 3000); // Hide after 3 seconds
+        };
+
+        // --- Game State Management (Local Storage) ---
+        const loadGameState = () => {
+            try {
+                const savedState = localStorage.getItem('coinTapMasterState');
+                if (savedState) {
+                    const gameState = JSON.parse(savedState);
+                    coins = gameState.coins || 0;
+                    pphC = gameState.pphC || 0;
+                    pphK = gameState.pphK || 0;
+                    ownedCards = gameState.ownedCards || {}; // Load owned cards
+                    console.log("Game state loaded in Cards page:", gameState);
+                } else {
+                    console.log("No saved game state found in Cards page. Initializing defaults.");
+                }
+            } catch (e) {
+                console.error("Error loading game state in Cards page:", e);
+                showNotification("Error loading game data!", "error");
+            }
+            updateUI();
+            renderCards(); // Render cards after loading state
+        };
+
+        const saveGameState = () => {
+            // Retrieve the full existing state to preserve other properties
+            let existingState = {};
+            try {
+                const savedState = localStorage.getItem('coinTapMasterState');
+                if (savedState) {
+                    existingState = JSON.parse(savedState);
+                }
+            } catch (e) {
+                console.error("Error parsing existing game state from Local Storage:", e);
+            }
+
+            const gameState = {
+                ...existingState, // Spread existing properties
+                coins: coins, // Update coins
+                pphC: pphC,   // Update pphC
+                pphK: pphK,   // Update pphK
+                ownedCards: ownedCards, // Update owned cards
+                lastOnlineTime: Date.now() // Always update last online time on save
+            };
+            try {
+                localStorage.setItem('coinTapMasterState', JSON.stringify(gameState));
+                console.log("Game state saved from Cards page:", gameState);
+            } catch (e) {
+                console.error("Error saving game state from Cards page:", e);
+                showNotification("Error saving game data!", "error");
+            }
+            updateUI(); // Update UI after saving
+        };
+
+        // --- UI Update Functions ---
+        const updateUI = () => {
+            coinsDisplayHeader.textContent = formatNumber(coins);
+            pphCoinsDisplayHeader.textContent = `${formatNumber(pphC)} PPH (C)`;
+            pphKeysDisplayHeader.textContent = `${formatNumber(pphK)} PPH (K)`;
+        };
+
+        // --- Card Rendering and Logic ---
+        const getCardCalculatedStats = (cardDef, currentLevel) => {
+            const level = currentLevel > 0 ? currentLevel : 1; // If not owned, show stats for level 1
+            const currentPphC = cardDef.basePphC + (cardDef.pphC_per_level * (level - 1));
+            const currentPphK = cardDef.basePphK + (cardDef.pphK_per_level * (level - 1));
+            const nextLevel = level + 1;
+            const nextCost = Math.floor(cardDef.baseCost * Math.pow(cardDef.cost_multiplier_per_level, level - 1)); // Cost for next level
+
+            return { currentPphC, currentPphK, nextCost, nextLevel };
+        };
+
+        const renderCards = () => {
+            cardsContainer.innerHTML = ''; // Clear previous cards
+            const sections = {
+                'default': { title: 'Default Cards', color: 'text-purple-400', cards: [] },
+                'red': { title: 'Red Cards', color: 'text-red-500', cards: [] },
+                'golden': { title: 'Golden Cards', color: 'text-yellow-400', cards: [] },
+                'special': { title: 'Special Cards', color: 'text-purple-400', cards: [] }
+            };
+
+            // Group cards by type
+            cardDefinitions.forEach(cardDef => {
+                sections[cardDef.type].cards.push(cardDef);
+            });
+
+            for (const type in sections) {
+                const sectionData = sections[type];
+                const sectionElement = document.createElement('section');
+                sectionElement.className = 'w-full max-w-4xl mb-10';
+                sectionElement.innerHTML = `
+                    <h2 class="text-3xl font-bold ${sectionData.color} mb-6 text-center">${sectionData.title}</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" id="cards-grid-${type}">
+                        </div>
+                `;
+                cardsContainer.appendChild(sectionElement);
+
+                const cardsGrid = sectionElement.querySelector(`#cards-grid-${type}`);
+
+                sectionData.cards.forEach(cardDef => {
+                    const currentCardLevel = ownedCards[cardDef.id] ? ownedCards[cardDef.id].level : 0;
+                    const { currentPphC, currentPphK, nextCost, nextLevel } = getCardCalculatedStats(cardDef, currentCardLevel);
+
+                    const isMaxLevel = currentCardLevel >= cardDef.maxLevel;
+                    const buttonText = currentCardLevel === 0 ? 'Buy Card' : (isMaxLevel ? 'MAX LEVEL' : `Upgrade (Lvl ${nextLevel})`);
+                    const buttonDisabled = isMaxLevel;
+
+                    const cardElement = document.createElement('div');
+                    cardElement.className = `relative ${cardDef.bgColor} p-6 rounded-xl shadow-lg border ${cardDef.borderColor} text-center ${cardDef.glowClass}`;
+                    cardElement.innerHTML = `
+                        <div class="absolute top-2 left-2 bg-gray-900 text-white text-xs font-bold px-3 py-1 rounded-full border border-purple-500">
+                            Lvl ${currentCardLevel} / ${cardDef.maxLevel}
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2 mt-6">${cardDef.name}</h3>
+                        <p class="text-gray-300 text-sm mb-2">${cardDef.description}</p>
+                        <p class="text-gray-300 text-sm mb-2">PPH (C): <span class="font-bold text-purple-400">${formatNumber(currentPphC)}</span></p>
+                        <p class="text-gray-300 text-sm mb-4">PPH (K): <span class="font-bold text-yellow-400">${formatNumber(currentPphK)}</span></p>
+                        <p class="${cardDef.costText} font-semibold mb-4">${isMaxLevel ? 'Max Level Reached!' : `Cost: ${formatNumber(nextCost)} Coins`}</p>
+                        <button id="buy-upgrade-${cardDef.id}" class="px-6 py-3 ${cardDef.buttonBg} ${cardDef.buttonHover} ${cardDef.buttonText} font-semibold rounded-lg shadow-md transition-colors btn-tap-animation ${buttonDisabled ? 'opacity-50 cursor-not-allowed' : ''}" ${buttonDisabled ? 'disabled' : ''}>
+                            ${buttonText}
+                        </button>
+                    `;
+                    cardsGrid.appendChild(cardElement);
+
+                    // Add event listener to the button
+                    if (!buttonDisabled) {
+                        document.getElementById(`buy-upgrade-${cardDef.id}`).addEventListener('click', () => handleCardAction(cardDef.id));
+                    }
+                });
+            }
+        };
+
+        const handleCardAction = (cardId) => {
+            const cardDef = cardDefinitions.find(c => c.id === cardId);
+            if (!cardDef) {
+                showNotification("Card not found!", "error");
+                return;
+            }
+
+            const currentCardLevel = ownedCards[cardDef.id] ? ownedCards[cardDef.id].level : 0;
+
+            if (currentCardLevel >= cardDef.maxLevel) {
+                showNotification("Card is already at max level!", "info");
+                return;
+            }
+
+            const { nextCost } = getCardCalculatedStats(cardDef, currentCardLevel);
+
+            if (coins >= nextCost) {
+                coins -= nextCost;
+                const newLevel = currentCardLevel + 1;
+
+                // Update global PPH values
+                pphC += cardDef.pphC_per_level;
+                pphK += cardDef.pphK_per_level;
+
+                ownedCards[cardDef.id] = { level: newLevel }; // Update owned cards state
+
+                showNotification(`Successfully ${currentCardLevel === 0 ? 'bought' : 'upgraded'} ${cardDef.name} to Level ${newLevel}!`, "success");
+                saveGameState(); // Save updated game state
+                renderCards(); // Re-render cards to reflect changes
+            } else {
+                showNotification(`Not enough coins! You need ${formatNumber(nextCost - coins)} more.`, "error");
+            }
+        };
+
+        // Initialize on page load
+        window.onload = loadGameState;
+    </script>
+</body>
+</html>
